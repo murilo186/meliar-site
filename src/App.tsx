@@ -1,9 +1,9 @@
-import { CategoryChips } from "@/components/store/category-chips";
 import { CartProvider } from "@/components/store/cart-provider";
-import { FeaturedProducts } from "@/components/store/featured-products";
 import { Footer } from "@/components/store/footer";
 import { Header } from "@/components/store/header";
 import { Hero } from "@/components/store/hero";
+import { InstagramSection } from "@/components/store/instagram-section";
+import { NewArrivalsSection } from "@/components/store/new-arrivals-section";
 
 export default function App() {
   return (
@@ -12,8 +12,8 @@ export default function App() {
         <Header />
         <main>
           <Hero />
-          <CategoryChips />
-          <FeaturedProducts />
+          <NewArrivalsSection />
+          <InstagramSection />
         </main>
         <Footer />
       </div>
