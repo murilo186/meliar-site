@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
+  <title id="title">Vestido midi acetinado</title>
+  <rect width="800" height="1000" fill="#fff4f7"/>
+  <rect x="76" y="76" width="648" height="848" rx="34" fill="#ffffff"/>
+  <path d="M352 176h96l34 116c42 74 90 188 128 390 7 36-21 70-58 70H248c-37 0-65-34-58-70 38-202 86-316 128-390l34-116Z" fill="#f74780"/>
+  <path d="M354 177c5 64 22 116 46 116s41-52 46-116" fill="#ffc1d5"/>
+  <path d="M318 292h164" stroke="#111111" stroke-width="14" stroke-linecap="round"/>
+  <path d="M246 748h308" stroke="#111111" stroke-opacity=".13" stroke-width="18" stroke-linecap="round"/>
+</svg>

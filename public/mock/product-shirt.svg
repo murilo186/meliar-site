@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
+  <title id="title">Camisa cropped alfaiataria</title>
+  <rect width="800" height="1000" fill="#f8f1f3"/>
+  <rect x="76" y="76" width="648" height="848" rx="34" fill="#ffffff"/>
+  <path d="M256 242 354 186h92l98 56 82 126-88 64-44-68v250H306V364l-44 68-88-64 82-126Z" fill="#ffe4ec"/>
+  <path d="M354 186 400 286l46-100" fill="#ffffff"/>
+  <path d="M400 286v328" stroke="#111111" stroke-opacity=".35" stroke-width="10"/>
+  <circle cx="426" cy="356" r="8" fill="#f74780"/>
+  <circle cx="426" cy="430" r="8" fill="#f74780"/>
+  <circle cx="426" cy="504" r="8" fill="#f74780"/>
+  <path d="M306 614h188" stroke="#111111" stroke-opacity=".15" stroke-width="18" stroke-linecap="round"/>
+</svg>
