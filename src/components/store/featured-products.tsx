@@ -5,7 +5,7 @@ import { ProductCard } from "./product-card";
 
 export function FeaturedProducts() {
   return (
-    <section className="bg-white py-4 sm:py-5" id="produtos">
+    <section className="bg-white pb-4 pt-0 sm:pb-5 sm:pt-0" id="produtos">
       <div className="container">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
