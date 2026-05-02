@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
@@ -20,6 +20,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [selectedSize, setSelectedSize] = useState("");
   const [activeImage, setActiveImage] = useState(defaultVariant.images[0]);
   const [showSizeError, setShowSizeError] = useState(false);
+  const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
 
   const selectedVariant = useMemo(
@@ -37,6 +38,51 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
 
     setSelectedVariantSlug(variant.slug);
     setActiveImage(variant.images[0]);
+
+    requestAnimationFrame(() => {
+      mobileGalleryRef.current?.scrollTo({ left: 0, behavior: "smooth" });
+    });
+  };
+
+  const handleMobileGalleryScroll = () => {
+    const element = mobileGalleryRef.current;
+
+    if (!element) {
+      return;
+    }
+
+    const nextIndex = Math.round(element.scrollLeft / element.clientWidth);
+    const nextImage = selectedVariant.images[nextIndex];
+
+    if (nextImage && nextImage !== activeImage) {
+      setActiveImage(nextImage);
+    }
+  };
+
+  const scrollToImage = (image: string) => {
+    const element = mobileGalleryRef.current;
+    const imageIndex = selectedVariant.images.indexOf(image);
+
+    setActiveImage(image);
+
+    if (!element || imageIndex < 0) {
+      return;
+    }
+
+    element.scrollTo({
+      left: imageIndex * element.clientWidth,
+      behavior: "smooth",
+    });
+  };
+
+  const handleAdvanceImage = () => {
+    const currentIndex = selectedVariant.images.indexOf(activeImage);
+    const nextIndex =
+      currentIndex >= 0
+        ? (currentIndex + 1) % selectedVariant.images.length
+        : 0;
+
+    setActiveImage(selectedVariant.images[nextIndex]);
   };
 
   const handleAddToCart = () => {
@@ -62,63 +108,106 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   return (
     <section className="bg-white py-4 sm:py-6">
       <div className="container">
-        <nav className="mb-4 flex items-center gap-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
-          <Link href="/produtos">Loja</Link>
-          <ChevronRight className="h-3.5 w-3.5" />
-          <Link href={`/${product.categorySlug}`}>{product.category}</Link>
+        <nav className="mb-4 flex flex-wrap items-center gap-x-1 gap-y-1 text-[11px] font-bold uppercase tracking-[0.12em] text-muted-foreground">
+          <Link className="whitespace-nowrap" href="/produtos">
+            Loja
+          </Link>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          <Link className="whitespace-nowrap" href={`/${product.categorySlug}`}>
+            {product.category}
+          </Link>
           {product.subcategory && product.subcategorySlug ? (
             <>
-              <ChevronRight className="h-3.5 w-3.5" />
-              <Link href={`/${product.categorySlug}/${product.subcategorySlug}`}>
+              <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+              <Link
+                className="whitespace-nowrap"
+                href={`/${product.categorySlug}/${product.subcategorySlug}`}
+              >
                 {product.subcategory}
               </Link>
             </>
           ) : null}
-          <ChevronRight className="h-3.5 w-3.5" />
-          <span className="text-melier-ink">{product.name}</span>
+          <ChevronRight className="h-3.5 w-3.5 shrink-0" />
+          <span className="whitespace-nowrap text-melier-ink">{product.name}</span>
         </nav>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_420px] lg:gap-8">
           <div className="grid gap-3">
-            <div className="overflow-hidden rounded-[1.75rem] bg-[#f6f1ea]">
-              <img
-                alt={`${product.name} na cor ${selectedVariant.color}`}
-                className="aspect-[4/5] w-full object-cover"
-                src={activeImage}
-              />
+            <div
+              className="flex snap-x snap-mandatory overflow-x-auto scrollbar-none lg:hidden"
+              onScroll={handleMobileGalleryScroll}
+              ref={mobileGalleryRef}
+            >
+              {selectedVariant.images.map((image, index) => (
+                <div className="w-full shrink-0 snap-center" key={image}>
+                  <img
+                    alt={`${product.name} na cor ${selectedVariant.color} foto ${index + 1}`}
+                    className="aspect-square w-full object-cover"
+                    src={image}
+                  />
+                </div>
+              ))}
             </div>
 
-            <div className="grid grid-cols-4 gap-2 sm:grid-cols-5">
+            <div className="flex items-center justify-center gap-2 lg:hidden">
               {selectedVariant.images.map((image, index) => (
                 <button
+                  aria-label={`Ir para foto ${index + 1}`}
                   className={cn(
-                    "overflow-hidden rounded-2xl border bg-[#f6f1ea] transition",
-                    activeImage === image
-                      ? "border-melier-ink"
-                      : "border-transparent hover:border-melier-rose",
+                    "h-2.5 w-2.5 rounded-full transition",
+                    activeImage === image ? "bg-melier-ink" : "bg-black/15",
                   )}
                   key={image}
-                  onClick={() => setActiveImage(image)}
+                  onClick={() => scrollToImage(image)}
+                  type="button"
+                />
+              ))}
+            </div>
+
+            <div className="hidden lg:grid lg:grid-cols-[88px_minmax(0,1fr)] lg:gap-3">
+              <div className="grid content-start gap-2">
+                {selectedVariant.images.map((image, index) => (
+                  <button
+                    className={cn(
+                      "block w-full overflow-hidden bg-transparent p-0 text-left leading-none transition",
+                      activeImage === image
+                        ? "ring-1 ring-melier-ink"
+                        : "hover:ring-1 hover:ring-melier-rose",
+                    )}
+                    key={image}
+                    onClick={() => setActiveImage(image)}
+                    type="button"
+                  >
+                    <img
+                      alt={`${product.name} foto ${index + 1}`}
+                      className="aspect-square w-full object-cover"
+                      src={image}
+                    />
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative">
+                <button
+                  className="block w-full overflow-hidden bg-transparent p-0 text-left leading-none"
+                  onClick={handleAdvanceImage}
                   type="button"
                 >
                   <img
-                    alt={`${product.name} foto ${index + 1}`}
-                    className="aspect-[4/5] w-full object-cover"
-                    src={image}
-                  />
+                  alt={`${product.name} na cor ${selectedVariant.color}`}
+                  className="w-full object-cover"
+                  src={activeImage}
+                />
                 </button>
-              ))}
+              </div>
             </div>
           </div>
 
           <div className="lg:sticky lg:top-24">
-            <div className="rounded-[1.75rem] border border-black/10 bg-white p-4 sm:p-5">
+            <div className="rounded-[1.75rem] bg-white p-4 sm:p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-melier-rose">
-                    {product.category}
-                  </p>
-                  <h1 className="mt-2 text-2xl font-black leading-tight text-melier-ink sm:text-[2rem]">
+                  <h1 className="text-2xl font-black leading-tight text-melier-ink sm:text-[2rem]">
                     {product.name}
                   </h1>
                 </div>
@@ -144,28 +233,10 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 {product.shortDescription}
               </p>
 
-              <div className="mt-5 grid gap-2 rounded-2xl bg-[#fcf7f8] p-3 text-sm">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-muted-foreground">Cor selecionada</span>
-                  <span className="font-bold text-melier-ink">{selectedVariant.color}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="font-semibold text-muted-foreground">Fotos desta cor</span>
-                  <span className="font-bold text-melier-ink">
-                    {selectedVariant.images.length} imagens
-                  </span>
-                </div>
-              </div>
-
               <div className="mt-5">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="text-sm font-extrabold uppercase tracking-[0.12em] text-melier-ink">
-                    Cor
-                  </p>
-                  <p className="text-xs font-semibold text-muted-foreground">
-                    Troque para ver outras fotos
-                  </p>
-                </div>
+                <p className="mb-2 text-sm font-extrabold uppercase tracking-[0.12em] text-melier-ink">
+                  Cor
+                </p>
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {product.variants.map((variant) => {
                     const isActive = variant.slug === selectedVariant.slug;
@@ -173,10 +244,10 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                     return (
                       <button
                         className={cn(
-                          "flex items-center justify-between rounded-2xl border px-3 py-3 text-left transition",
+                          "flex min-h-12 items-center justify-between border px-3 py-3 text-left transition",
                           isActive
                             ? "border-melier-ink bg-white"
-                            : "border-black/10 bg-white hover:border-melier-rose",
+                            : "border-black/20 bg-white hover:border-melier-ink",
                         )}
                         key={variant.slug}
                         onClick={() => handleVariantChange(variant.slug)}
@@ -206,10 +277,10 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                   {product.sizes.map((size) => (
                     <button
                       className={cn(
-                        "rounded-2xl border px-3 py-3 text-sm font-extrabold transition",
+                        "flex h-12 items-center justify-center border px-3 text-sm font-extrabold uppercase tracking-[0.08em] transition",
                         selectedSize === size
                           ? "border-melier-ink bg-melier-ink text-white"
-                          : "border-black/10 text-melier-ink hover:border-melier-rose hover:text-melier-rose",
+                          : "border-black/20 bg-white text-melier-ink hover:border-melier-ink",
                       )}
                       key={size}
                       onClick={() => {
@@ -230,12 +301,9 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               </div>
 
               <div className="mt-6 grid gap-2">
-                <Button className="h-11 w-full rounded-full" onClick={handleAddToCart} type="button">
+                <Button className="h-11 w-full rounded-none" onClick={handleAddToCart} type="button">
                   <ShoppingBag className="h-4 w-4" />
                   Adicionar à sacola
-                </Button>
-                <Button asChild className="h-11 w-full rounded-full" variant="outline">
-                  <Link href="/produtos">Continuar comprando</Link>
                 </Button>
               </div>
 

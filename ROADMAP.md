@@ -202,18 +202,41 @@ Criar a página individual de produto.
 
 ### Tarefas
 
-- [ ] Criar rota dinâmica de produto.
-- [ ] Buscar produto pelo slug.
-- [ ] Criar `ProductGallery`.
-- [ ] Criar `ProductInfo`.
-- [ ] Criar `VariantSelector`.
-- [ ] Permitir seleção de cor.
-- [ ] Permitir seleção de tamanho.
+- [x] Criar rota dinâmica de produto.
+- [x] Buscar produto pelo slug.
+- [x] Criar `ProductGallery`.
+- [x] Criar `ProductInfo`.
+- [x] Criar `VariantSelector`.
+- [x] Permitir seleção de cor.
+- [x] Permitir seleção de tamanho.
 - [ ] Permitir escolha de quantidade.
-- [ ] Exibir preço.
-- [ ] Exibir descrição.
+- [x] Exibir preço.
+- [x] Exibir descrição.
 - [ ] Exibir informações simples de compra via WhatsApp.
-- [ ] Criar botão “Adicionar à sacola”.
+- [x] Criar botão “Adicionar à sacola”.
+
+### Status atual
+
+Em andamento avançado.
+
+A `v3.0` já consolidou:
+- rota `/produto/[slug]` ligada ao clique dos cards;
+- novo modelo de produto com galeria e variantes por cor;
+- home e PLP apontando para a PDP real;
+- seletor de cor e seletor de tamanho na PDP;
+- galeria mobile com swipe e indicadores;
+- galeria desktop com miniaturas laterais e avanço por clique;
+- sacola preparada para receber seleção de cor e tamanho;
+- ajustes de header para evitar glitch em páginas curtas.
+
+### Próximo passo
+
+Próxima implementação recomendada para a `v0.4`:
+- finalizar a rota `/carrinho`;
+- persistir a sacola no navegador;
+- gerar a mensagem estruturada de checkout no WhatsApp;
+- revisar microcopy e acabamento visual final da PDP/PLP;
+- substituir os dados inferidos do catálogo pelos dados vindos do `.txt` quando ele existir.
 
 ### Critério de conclusão
 

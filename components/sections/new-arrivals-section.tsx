@@ -93,7 +93,7 @@ export function NewArrivalsSection() {
                             {formatCurrency(product.oldPrice)}
                           </span>
                         ) : (
-                          "Escolha a cor na página da peça"
+                          "Ver detalhes"
                         )}
                       </p>
                     </div>

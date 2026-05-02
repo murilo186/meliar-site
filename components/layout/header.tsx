@@ -49,7 +49,19 @@ export function Header() {
 
   useEffect(() => {
     const handleScroll = () => {
-      setIsCompact(window.scrollY > 36);
+      setIsCompact((currentValue) => {
+        const nextScrollY = window.scrollY;
+
+        if (!currentValue && nextScrollY > 56) {
+          return true;
+        }
+
+        if (currentValue && nextScrollY < 20) {
+          return false;
+        }
+
+        return currentValue;
+      });
     };
 
     handleScroll();
