@@ -5,6 +5,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: storeConfig.name,
   description: storeConfig.description,
+  icons: {
+    icon: "/images/logo/favicon.png",
+    shortcut: "/images/logo/favicon.png",
+    apple: "/images/logo/favicon.png",
+  },
 };
 
 export default function RootLayout({

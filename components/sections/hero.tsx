@@ -7,27 +7,27 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const spotlightCategories = [
   {
     title: "Vestidos",
-    image: "/images/roupas/category/category_vestidos.jpeg",
+    image: "/images/roupas/categories/category_vestidos.jpeg",
     href: "/vestidos",
   },
   {
     title: "Calcas",
-    image: "/images/roupas/category/category_calcas.jpeg",
+    image: "/images/roupas/categories/category_calcas.jpeg",
     href: "/partes-de-baixo/calcas",
   },
   {
     title: "Saias",
-    image: "/images/roupas/category/category_saias.jpeg",
+    image: "/images/roupas/categories/category_saias.jpeg",
     href: "/partes-de-baixo/saias",
   },
   {
     title: "Croppeds",
-    image: "/images/roupas/category/category_croppeds.jpeg",
+    image: "/images/roupas/categories/category_croppeds.jpeg",
     href: "/partes-de-cima/croppeds",
   },
   {
     title: "Conjuntos",
-    image: "/images/roupas/category/category_conjuntos.jpeg",
+    image: "/images/roupas/categories/category_conjuntos.jpeg",
     href: "/conjuntos",
   },
 ];
