@@ -1,10 +1,20 @@
 "use client";
 
 import { createContext } from "react";
-import type { Product } from "@/types/product";
+
+export interface CartProductSelection {
+  id: string;
+  productId: number;
+  productSlug: string;
+  name: string;
+  price: number;
+  image: string;
+  color: string;
+  size: string;
+}
 
 export interface CartItem {
-  product: Product;
+  selection: CartProductSelection;
   quantity: number;
 }
 
@@ -12,9 +22,9 @@ export interface CartContextValue {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
-  addItem: (product: Product) => void;
-  decreaseItem: (productId: number) => void;
-  removeItem: (productId: number) => void;
+  addItem: (selection: CartProductSelection) => void;
+  decreaseItem: (selectionId: string) => void;
+  removeItem: (selectionId: string) => void;
   clearCart: () => void;
 }
 

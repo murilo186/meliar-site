@@ -1,4 +1,5 @@
 import { products } from "@/data/products";
+import type { Product, ProductVariant } from "@/types/product";
 
 export type ProductSort =
   | "featured"
@@ -45,6 +46,10 @@ export function getProducts(sort: ProductSort = "featured") {
   return sortProducts(sort);
 }
 
+export function getFeaturedProducts(limit = 6) {
+  return products.slice(0, limit);
+}
+
 export function getProductsByCategory(
   categorySlug: string,
   sort: ProductSort = "featured",
@@ -62,4 +67,42 @@ export function getProductsBySubcategory(
       product.categorySlug === categorySlug &&
       product.subcategorySlug === subcategorySlug,
   );
+}
+
+export function getProductBySlug(slug: string) {
+  return products.find((product) => product.slug === slug);
+}
+
+export function getRelatedProducts(product: Product, limit = 4) {
+  return products
+    .filter(
+      (item) =>
+        item.slug !== product.slug &&
+        (item.subcategorySlug === product.subcategorySlug ||
+          item.categorySlug === product.categorySlug),
+    )
+    .slice(0, limit);
+}
+
+export function getDefaultVariant(product: Product): ProductVariant {
+  const variant =
+    product.variants.find((item) => item.slug === product.defaultVariantSlug) ??
+    product.variants[0];
+
+  if (!variant) {
+    throw new Error(`Product ${product.slug} does not have variants.`);
+  }
+
+  return variant;
+}
+
+export function getVariantBySlug(product: Product, variantSlug?: string) {
+  return (
+    product.variants.find((variant) => variant.slug === variantSlug) ??
+    getDefaultVariant(product)
+  );
+}
+
+export function getProductPrimaryImage(product: Product, variantSlug?: string) {
+  return getVariantBySlug(product, variantSlug).images[0];
 }

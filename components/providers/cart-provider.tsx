@@ -1,34 +1,38 @@
 "use client";
 
 import { PropsWithChildren, useMemo, useState } from "react";
-import { CartContext, CartContextValue, CartItem } from "@/components/cart/cart-store";
-import type { Product } from "@/types/product";
+import {
+  CartContext,
+  CartContextValue,
+  CartItem,
+  CartProductSelection,
+} from "@/components/cart/cart-store";
 
 export function CartProvider({ children }: PropsWithChildren) {
   const [items, setItems] = useState<CartItem[]>([]);
 
-  const addItem = (product: Product) => {
+  const addItem = (selection: CartProductSelection) => {
     setItems((currentItems) => {
       const existingItem = currentItems.find(
-        (item) => item.product.id === product.id,
+        (item) => item.selection.id === selection.id,
       );
 
       if (!existingItem) {
-        return [...currentItems, { product, quantity: 1 }];
+        return [...currentItems, { selection, quantity: 1 }];
       }
 
       return currentItems.map((item) =>
-        item.product.id === product.id
+        item.selection.id === selection.id
           ? { ...item, quantity: item.quantity + 1 }
           : item,
       );
     });
   };
 
-  const decreaseItem = (productId: number) => {
+  const decreaseItem = (selectionId: string) => {
     setItems((currentItems) =>
       currentItems.flatMap((item) => {
-        if (item.product.id !== productId) {
+        if (item.selection.id !== selectionId) {
           return item;
         }
 
@@ -41,9 +45,9 @@ export function CartProvider({ children }: PropsWithChildren) {
     );
   };
 
-  const removeItem = (productId: number) => {
+  const removeItem = (selectionId: string) => {
     setItems((currentItems) =>
-      currentItems.filter((item) => item.product.id !== productId),
+      currentItems.filter((item) => item.selection.id !== selectionId),
     );
   };
 
@@ -54,7 +58,7 @@ export function CartProvider({ children }: PropsWithChildren) {
   const value = useMemo<CartContextValue>(() => {
     const itemCount = items.reduce((total, item) => total + item.quantity, 0);
     const subtotal = items.reduce(
-      (total, item) => total + item.product.price * item.quantity,
+      (total, item) => total + item.selection.price * item.quantity,
       0,
     );
 

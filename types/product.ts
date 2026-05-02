@@ -1,3 +1,10 @@
+export interface ProductVariant {
+  slug: string;
+  color: string;
+  colorHex: string;
+  images: string[];
+}
+
 export interface Product {
   id: number;
   slug: string;
@@ -8,7 +15,12 @@ export interface Product {
   subcategorySlug?: string;
   price: number;
   oldPrice?: number;
-  image: string;
   label?: string;
-  color: string;
+  shortDescription: string;
+  description: string;
+  composition: string;
+  fitNote?: string;
+  sizes: string[];
+  defaultVariantSlug?: string;
+  variants: ProductVariant[];
 }

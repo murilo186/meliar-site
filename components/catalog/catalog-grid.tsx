@@ -24,8 +24,8 @@ export function CatalogGrid({ products, variant = "default" }: CatalogGridProps)
     <div
       className={
         variant === "editorial"
-          ? "grid grid-cols-2 gap-x-4 gap-y-7 md:grid-cols-3 xl:grid-cols-4"
-          : "grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4"
+          ? "grid grid-cols-1 gap-x-4 gap-y-7 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
+          : "grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"
       }
     >
       {products.map((product) => (
