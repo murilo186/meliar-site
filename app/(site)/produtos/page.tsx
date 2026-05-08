@@ -1,5 +1,6 @@
 import { CatalogPage } from "@/components/catalog/catalog-page";
-import { getProducts, parseProductSort } from "@/lib/catalog/get-products";
+import { parseProductSort } from "@/lib/catalog/get-products";
+import { getProductsFromDb } from "@/lib/catalog/get-products-db";
 
 interface ProductsPageProps {
   searchParams?: Promise<{
@@ -10,7 +11,7 @@ interface ProductsPageProps {
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
   const params = await searchParams;
   const sort = parseProductSort(params?.sort);
-  const products = getProducts(sort);
+  const products = await getProductsFromDb(sort);
 
   return (
     <CatalogPage

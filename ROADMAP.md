@@ -6,6 +6,29 @@ Organizar a implementação do site da Meliar em etapas pequenas, evitando que o
 
 A primeira versão deve entregar um site público em Next.js com catálogo, página de produto, carrinho local e finalização pelo WhatsApp.
 
+## Status de retomada
+
+Data de referência: 2026-05-02.
+
+Branch atual: `v0.4`.
+
+Entregue até agora:
+- base Next.js, Tailwind e layout público funcionando;
+- home, PLP e PDP com catálogo local;
+- catálogo com variações por cor e galeria por peça;
+- sacola local com cor, tamanho, quantidade e subtotal;
+- persistência da sacola no navegador;
+- página `/carrinho` com resumo e CTA para WhatsApp;
+- checkout estruturado para `+55 13 99754-1662`;
+- header ajustado para não glitchar em páginas curtas;
+- navegação e cartões apontando para a PDP correta.
+
+Próximo corte recomendado:
+- revisar e finalizar a experiência de `/carrinho`;
+- refinar o texto de WhatsApp e o fechamento do pedido;
+- substituir o catálogo inferido pelo arquivo `.txt` quando ele existir;
+- então abrir o próximo pacote na `v0.4` sem recomeçar a base.
+
 ## Premissas
 
 - O projeto começa sem backend separado.

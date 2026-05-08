@@ -7,27 +7,27 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 const spotlightCategories = [
   {
     title: "Vestidos",
-    image: "/images/roupas/categories/category_vestidos.jpeg",
+    image: "/images/roupas/categories/category_vestidos.webp",
     href: "/vestidos",
   },
   {
     title: "Calcas",
-    image: "/images/roupas/categories/category_calcas.jpeg",
+    image: "/images/roupas/categories/category_calcas.webp",
     href: "/partes-de-baixo/calcas",
   },
   {
     title: "Saias",
-    image: "/images/roupas/categories/category_saias.jpeg",
+    image: "/images/roupas/categories/category_saias.webp",
     href: "/partes-de-baixo/saias",
   },
   {
     title: "Croppeds",
-    image: "/images/roupas/categories/category_croppeds.jpeg",
+    image: "/images/roupas/categories/category_croppeds.webp",
     href: "/partes-de-cima/croppeds",
   },
   {
     title: "Conjuntos",
-    image: "/images/roupas/categories/category_conjuntos.jpeg",
+    image: "/images/roupas/categories/category_conjuntos.webp",
     href: "/conjuntos",
   },
 ];
@@ -82,11 +82,11 @@ export function Hero() {
           href="/produtos"
         >
           <picture className="block sm:aspect-[1284/494]">
-            <source media="(min-width: 640px)" srcSet="/images/hero/desktop_hero.jpeg" />
+            <source media="(min-width: 640px)" srcSet="/images/hero/desktop_hero.webp" />
             <img
               alt="Colecao em destaque"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
-              src="/images/hero/mobile_hero.jpeg"
+              src="/images/hero/mobile_hero.webp"
             />
           </picture>
         </Link>

@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ChevronDown, Menu, Search, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronDown, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   Sheet,
   SheetClose,
@@ -42,10 +43,14 @@ const logoHeader = "/images/logo/logo_header1.png";
 
 export function Header() {
   const [isCompact, setIsCompact] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [desktopHoverItem, setDesktopHoverItem] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [firstName, setFirstName] = useState("");
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const profileMenuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -69,6 +74,65 @@ export function Header() {
 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+
+    async function loadUserState() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setIsAuthenticated(false);
+        setIsAdmin(false);
+        setFirstName("");
+        return;
+      }
+
+      setIsAuthenticated(true);
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("first_name,role")
+        .eq("id", user.id)
+        .maybeSingle();
+      setFirstName(profile?.first_name?.trim() || "Cliente");
+      setIsAdmin(profile?.role === "admin");
+    }
+
+    void loadUserState();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(() => {
+      void loadUserState();
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!profileMenuRef.current) return;
+      if (profileMenuRef.current.contains(event.target as Node)) return;
+      setIsProfileMenuOpen(false);
+    }
+
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  async function handleLogout() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    setIsProfileMenuOpen(false);
+    setIsAuthenticated(false);
+    setIsAdmin(false);
+    setFirstName("");
+    window.location.href = "/";
+  }
 
   const headerHeight = isCompact ? "h-[70px]" : "h-[98px]";
   const logoSize =
@@ -255,52 +319,67 @@ export function Header() {
           </Link>
 
           <div className="z-10 flex items-center justify-end gap-1 sm:gap-2">
-            <Button
-              aria-controls="header-search-panel"
-              aria-expanded={isSearchOpen}
-              aria-label="Abrir busca"
-              className="text-melier-ink lg:hidden"
-              onClick={() => setIsSearchOpen((open) => !open)}
-              size="icon"
-              type="button"
-              variant="ghost"
-            >
-              {isSearchOpen ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-            </Button>
+            {isAuthenticated ? (
+              <div className="relative" ref={profileMenuRef}>
+                <button
+                  aria-expanded={isProfileMenuOpen}
+                  aria-haspopup="menu"
+                  className="flex flex-col items-start rounded-md px-2 py-1 text-left leading-tight"
+                  onClick={() => setIsProfileMenuOpen((current) => !current)}
+                  type="button"
+                >
+                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-black">
+                    Bem-vindo
+                  </span>
+                  <span className="text-sm font-semibold text-melier-rose">{firstName}</span>
+                </button>
+
+                {isProfileMenuOpen ? (
+                  <div className="absolute right-0 top-full z-[80] mt-2 w-44 border border-black/10 bg-white p-1 shadow-[0_10px_24px_rgba(17,17,17,0.12)]">
+                    <Link
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
+                      href="/perfil"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <User className="h-4 w-4" />
+                      Perfil
+                    </Link>
+                    {isAdmin ? (
+                      <Link
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
+                        href="/admin"
+                        onClick={() => setIsProfileMenuOpen(false)}
+                      >
+                        <Shield className="h-4 w-4" />
+                        Admin
+                      </Link>
+                    ) : null}
+                    <button
+                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-black hover:bg-[#ffe4ec]"
+                      onClick={handleLogout}
+                      type="button"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sair
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <Button
+                asChild
+                aria-label="Entrar"
+                className="text-melier-ink"
+                size="icon"
+                variant="ghost"
+              >
+                <Link href="/login">
+                  <User className="h-5 w-5" />
+                </Link>
+              </Button>
+            )}
             <CartDrawer />
           </div>
-        </div>
-      </div>
-
-      <div
-        className={`overflow-hidden border-b border-border/60 transition-all duration-300 ${
-          isSearchOpen ? "max-h-28 opacity-100" : "max-h-0 opacity-0"
-        }`}
-        id="header-search-panel"
-      >
-        <div className="container py-3">
-          <form
-            action="#"
-            className="flex flex-col gap-3 sm:flex-row sm:items-center"
-            role="search"
-          >
-            <label className="sr-only" htmlFor="header-search-input">
-              Buscar produtos
-            </label>
-            <div className="flex flex-1 items-center gap-3 rounded-full border border-border bg-white px-4 py-3">
-              <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <input
-                className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                id="header-search-input"
-                name="search"
-                placeholder="Buscar por nome, categoria ou coleção"
-                type="search"
-              />
-            </div>
-            <Button className="sm:min-w-32" type="submit" variant="outline">
-              Buscar
-            </Button>
-          </form>
         </div>
       </div>
 

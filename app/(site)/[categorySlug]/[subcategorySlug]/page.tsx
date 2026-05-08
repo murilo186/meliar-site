@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { CatalogPage } from "@/components/catalog/catalog-page";
 import { getCategoryBySlug, getSubcategoryBySlugs } from "@/lib/catalog/get-categories";
-import { getProductsBySubcategory, parseProductSort } from "@/lib/catalog/get-products";
+import { parseProductSort } from "@/lib/catalog/get-products";
+import { getProductsBySubcategoryFromDb } from "@/lib/catalog/get-products-db";
 
 interface SubcategoryPageProps {
   params: Promise<{
@@ -27,7 +28,11 @@ export default async function SubcategoryPage({
 
   const query = await searchParams;
   const sort = parseProductSort(query?.sort);
-  const products = getProductsBySubcategory(category.slug, subcategory.slug, sort);
+  const products = await getProductsBySubcategoryFromDb(
+    category.slug,
+    subcategory.slug,
+    sort,
+  );
 
   return (
     <CatalogPage

@@ -1,6 +1,6 @@
 "use client";
 
-import { PropsWithChildren, useMemo, useState } from "react";
+import { PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartContext,
   CartContextValue,
@@ -8,8 +8,33 @@ import {
   CartProductSelection,
 } from "@/components/cart/cart-store";
 
+const CART_STORAGE_KEY = "melier-cart-items";
+
 export function CartProvider({ children }: PropsWithChildren) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const storedItems = window.localStorage.getItem(CART_STORAGE_KEY);
+
+      if (storedItems) {
+        setItems(JSON.parse(storedItems) as CartItem[]);
+      }
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    } finally {
+      hasLoadedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      return;
+    }
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
 
   const addItem = (selection: CartProductSelection) => {
     setItems((currentItems) => {

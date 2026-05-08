@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 import { ProductCard } from "@/components/cart/product-card";
 import { ProductDetailView } from "@/components/product/product-detail-view";
-import { getProductBySlug, getRelatedProducts } from "@/lib/catalog/get-products";
+import {
+  getProductBySlugFromDb,
+  getRelatedProductsFromDb,
+} from "@/lib/catalog/get-products-db";
 
 interface ProductPageProps {
   params: Promise<{
@@ -11,13 +14,13 @@ interface ProductPageProps {
 
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = getProductBySlug(slug);
+  const product = await getProductBySlugFromDb(slug);
 
   if (!product) {
     notFound();
   }
 
-  const relatedProducts = getRelatedProducts(product);
+  const relatedProducts = await getRelatedProductsFromDb(product);
 
   return (
     <>

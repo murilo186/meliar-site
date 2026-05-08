@@ -5,14 +5,16 @@ import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   getDefaultVariant,
-  getFeaturedProducts,
   getProductPrimaryImage,
 } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
+import type { Product } from "@/types/product";
 
-const arrivals = getFeaturedProducts(6);
+interface NewArrivalsSectionProps {
+  products: Product[];
+}
 
-export function NewArrivalsSection() {
+export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
   return (
     <section className="bg-melier-shell py-8 sm:py-10" id="produtos">
       <div className="container">
@@ -34,7 +36,7 @@ export function NewArrivalsSection() {
         </div>
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          {arrivals.map((product) => {
+          {products.map((product) => {
             const defaultVariant = getDefaultVariant(product);
             const colorCount = product.variants.length;
 

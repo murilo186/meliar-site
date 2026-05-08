@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import {
   getDefaultVariant,
   getProductPrimaryImage,
@@ -20,6 +22,27 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const defaultVariant = getDefaultVariant(product);
   const productImage = getProductPrimaryImage(product);
   const colorCount = product.variants.length;
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    async function loadRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      setIsAdmin(profile?.role === "admin");
+    }
+    void loadRole();
+  }, []);
 
   return (
     <article
@@ -102,6 +125,11 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
           <Button asChild className={isEditorial ? "w-full rounded-none" : undefined} size="sm" variant="outline">
             <Link href={`/produto/${product.slug}`}>Ver peça</Link>
           </Button>
+          {isAdmin ? (
+            <Button asChild className={isEditorial ? "w-full rounded-none" : undefined} size="sm" variant="outline">
+              <Link href={`/admin/produtos/editar/${product.slug}`}>Editar peça</Link>
+            </Button>
+          ) : null}
         </div>
       </div>
     </article>

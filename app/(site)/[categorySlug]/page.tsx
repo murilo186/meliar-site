@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { CatalogPage } from "@/components/catalog/catalog-page";
 import { getCategoryBySlug } from "@/lib/catalog/get-categories";
-import { getProductsByCategory, parseProductSort } from "@/lib/catalog/get-products";
+import { parseProductSort } from "@/lib/catalog/get-products";
+import { getProductsByCategoryFromDb } from "@/lib/catalog/get-products-db";
 
 interface CategoryPageProps {
   params: Promise<{
@@ -25,7 +26,7 @@ export default async function CategoryPage({
 
   const query = await searchParams;
   const sort = parseProductSort(query?.sort);
-  const products = getProductsByCategory(category.slug, sort);
+  const products = await getProductsByCategoryFromDb(category.slug, sort);
 
   return (
     <CatalogPage

@@ -1,12 +1,13 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
 import { Button } from "@/components/ui/button";
 import { getDefaultVariant } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -22,6 +23,27 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [showSizeError, setShowSizeError] = useState(false);
   const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const supabase = createSupabaseBrowserClient();
+    async function loadRole() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        setIsAdmin(false);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle();
+      setIsAdmin(profile?.role === "admin");
+    }
+    void loadRole();
+  }, []);
 
   const selectedVariant = useMemo(
     () =>
@@ -305,6 +327,11 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                   <ShoppingBag className="h-4 w-4" />
                   Adicionar à sacola
                 </Button>
+                {isAdmin ? (
+                  <Button asChild className="h-11 w-full rounded-none" type="button" variant="outline">
+                    <Link href={`/admin/produtos/editar/${product.slug}`}>Editar peça</Link>
+                  </Button>
+                ) : null}
               </div>
 
               <div className="mt-6 grid gap-4 border-t pt-5">

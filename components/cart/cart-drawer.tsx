@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import {
   Sheet,
+  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -145,9 +147,11 @@ export function CartDrawer() {
                   <span className="text-melier-rose">Combinar no atendimento</span>
                 </div>
               </div>
-              <Button className="w-full" type="button">
-                Continuar pedido
-              </Button>
+              <SheetClose asChild>
+                <Button asChild className="w-full rounded-none">
+                  <Link href="/carrinho">Finalizar pedido</Link>
+                </Button>
+              </SheetClose>
               <button
                 className="mt-3 w-full text-center text-xs font-extrabold uppercase tracking-[0.12em] text-muted-foreground hover:text-melier-rose"
                 onClick={clearCart}
