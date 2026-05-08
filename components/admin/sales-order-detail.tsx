@@ -1,46 +1,42 @@
-"use client";
-
 import Link from "next/link";
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { UpdateOrderStatusButton } from "@/components/admin/update-order-status-button";
 import { formatCurrency } from "@/lib/format";
+import { buildOrderSupportWhatsAppUrl } from "@/lib/whatsapp/build-order-support-url";
 import type { AdminSalesOrder, AdminSalesStatus } from "@/types/admin";
+import type { OrderStatus } from "@/types/order";
 
 const statusLabel: Record<AdminSalesStatus, string> = {
-  open: "Aberto",
+  pending: "Pendente",
+  approved: "Aprovado",
   paid: "Pago",
-  in_delivery: "Em entrega",
-  finished: "Finalizado",
+  delivered: "Entregue",
   cancelled: "Cancelado",
 };
 
 const statusClass: Record<AdminSalesStatus, string> = {
-  open: "bg-amber-50 text-amber-700 border-amber-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  approved: "bg-blue-50 text-blue-700 border-blue-200",
   paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  in_delivery: "bg-blue-50 text-blue-700 border-blue-200",
-  finished: "bg-black/5 text-black border-black/15",
+  delivered: "bg-black/5 text-black border-black/15",
   cancelled: "bg-red-50 text-red-700 border-red-200",
 };
 
-const allowedTransitions: Record<AdminSalesStatus, AdminSalesStatus[]> = {
-  open: ["paid", "in_delivery", "cancelled"],
-  paid: ["in_delivery", "cancelled"],
-  in_delivery: ["finished", "cancelled"],
-  finished: [],
+const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
+  pending: ["approved", "cancelled"],
+  approved: ["paid", "cancelled"],
+  paid: ["delivered", "cancelled"],
+  delivered: [],
   cancelled: [],
 };
 
-function buildWhatsAppOrderUrl(order: AdminSalesOrder) {
-  const number = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER ?? "";
-  const clean = number.replace(/\D/g, "");
-  if (!clean) return "#";
-  const message = `Olá, sobre o pedido ${order.orderNumber}.`;
-  return `https://wa.me/${clean}?text=${encodeURIComponent(message)}`;
+function isPersistedOrderId(orderId: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    orderId,
+  );
 }
 
 export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
-  const [currentStatus, setCurrentStatus] = useState<AdminSalesStatus>(order.status);
-
   return (
     <section className="space-y-4">
       <header className="flex items-start justify-between gap-3">
@@ -54,8 +50,8 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
             {order.channel === "whatsapp" ? "WhatsApp" : "Manual"}
           </p>
         </div>
-        <span className={`inline-flex border px-2 py-0.5 text-xs ${statusClass[currentStatus]}`}>
-          {statusLabel[currentStatus]}
+        <span className={`inline-flex border px-2 py-0.5 text-xs ${statusClass[order.status]}`}>
+          {statusLabel[order.status]}
         </span>
       </header>
 
@@ -96,20 +92,18 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {allowedTransitions[currentStatus].map((nextStatus) => (
-          <Button
-            className="rounded-none"
-            key={nextStatus}
-            onClick={() => setCurrentStatus(nextStatus)}
-            size="sm"
-            type="button"
-            variant="outline"
-          >
-            Marcar como {statusLabel[nextStatus].toLowerCase()}
-          </Button>
-        ))}
+        {isPersistedOrderId(order.id)
+          ? allowedTransitions[order.status].map((nextStatus) => (
+              <UpdateOrderStatusButton
+                key={nextStatus}
+                nextStatus={nextStatus}
+                orderId={order.id}
+              />
+            ))
+          : null}
+
         <Button asChild className="rounded-none" size="sm" variant="outline">
-          <Link href={buildWhatsAppOrderUrl(order)} target="_blank">
+          <Link href={buildOrderSupportWhatsAppUrl(order.orderNumber)} target="_blank">
             Abrir WhatsApp
           </Link>
         </Button>
@@ -117,6 +111,12 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
           <Link href="/admin/vendas">Voltar para Vendas</Link>
         </Button>
       </div>
+
+      {!isPersistedOrderId(order.id) ? (
+        <p className="text-xs text-muted-foreground">
+          Ações de status ficam disponíveis quando o pedido está salvo no banco.
+        </p>
+      ) : null}
     </section>
   );
 }

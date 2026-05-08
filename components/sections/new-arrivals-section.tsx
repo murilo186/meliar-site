@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { Heart } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { getDefaultVariant, getProductPrimaryImage } from "@/lib/catalog/get-products";
+import { useEffect, useRef, useState } from "react";
+import { getProductPrimaryImage } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
 interface NewArrivalsSectionProps {
@@ -12,6 +12,57 @@ interface NewArrivalsSectionProps {
 }
 
 export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
+  const mobileCarouselRef = useRef<HTMLDivElement | null>(null);
+  const slideRefs = useRef<Array<HTMLAnchorElement | null>>([]);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const root = mobileCarouselRef.current;
+
+    if (!root) {
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visibleEntry = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort(
+            (a, b) =>
+              (b.intersectionRatio ?? 0) - (a.intersectionRatio ?? 0),
+          )[0];
+
+        if (!visibleEntry) {
+          return;
+        }
+
+        const nextIndex = slideRefs.current.findIndex(
+          (slide) => slide === visibleEntry.target,
+        );
+
+        if (nextIndex >= 0) {
+          setActiveSlide(nextIndex);
+        }
+      },
+      {
+        root,
+        threshold: [0.55, 0.7],
+      },
+    );
+
+    slideRefs.current.forEach((slide) => {
+      if (slide) {
+        observer.observe(slide);
+      }
+    });
+
+    return () => observer.disconnect();
+  }, [products.length]);
+
+  useEffect(() => {
+    setActiveSlide(0);
+  }, [products.length]);
+
   return (
     <section className="bg-melier-shell py-8 sm:py-10" id="produtos">
       <div className="container">
@@ -32,71 +83,92 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-          {products.map((product) => {
-            const defaultVariant = getDefaultVariant(product);
-            const colorCount = product.variants.length;
-
-            return (
-              <article
-                className="group overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft"
+        <div className="md:hidden">
+          <div
+            className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 scrollbar-none"
+            ref={mobileCarouselRef}
+          >
+            {products.map((product, index) => (
+              <Link
+                className="group block basis-[84%] shrink-0 snap-start"
+                href={`/produto/${product.slug}`}
                 key={product.id}
+                ref={(node) => {
+                  slideRefs.current[index] = node;
+                }}
               >
-                <Link className="block" href={`/produto/${product.slug}`}>
-                  <div className="relative aspect-[0.78] overflow-hidden bg-[#f7efe8]">
+                <article className="overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft">
+                  <div className="relative aspect-[0.92] overflow-hidden bg-[#f7efe8]">
                     <img
                       alt={product.name}
                       className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
                       src={getProductPrimaryImage(product)}
                     />
-                    {product.label ? (
-                      <span className="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-melier-rose">
-                        {product.label}
-                      </span>
-                    ) : null}
-                    <Button
-                      aria-label="Favoritar"
-                      className="absolute right-2 top-2 bg-white/90 text-melier-ink hover:bg-white hover:text-melier-rose"
-                      size="icon"
-                      type="button"
-                      variant="ghost"
-                    >
-                      <Heart className="h-4 w-4" />
-                    </Button>
                   </div>
-                </Link>
-
-                <div className="grid gap-3 p-3">
-                  <div>
-                    <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
-                      {product.category}
-                    </p>
-                    <h3 className="mt-1 text-sm font-extrabold leading-tight text-melier-ink">
+                  <div className="flex items-center justify-between gap-3 px-3 py-3">
+                    <h3 className="line-clamp-1 text-sm font-extrabold leading-tight text-melier-ink">
                       {product.name}
                     </h3>
-                    <p className="mt-1 text-xs font-semibold text-muted-foreground">
-                      {colorCount > 1
-                        ? `${colorCount} cores disponíveis`
-                        : defaultVariant.color}
-                    </p>
-                  </div>
-
-                  <div className="flex items-end justify-between gap-2">
-                    <Button
-                      asChild
-                      className="h-8 px-3 text-[11px] uppercase tracking-[0.08em]"
-                      size="sm"
-                    >
-                      <Link href={`/produto/${product.slug}`}>Ver peça</Link>
-                    </Button>
-                    <p className="text-sm font-extrabold text-melier-ink">
+                    <p className="shrink-0 text-sm font-extrabold text-melier-ink">
                       {formatCurrency(product.price)}
                     </p>
                   </div>
-                </div>
-              </article>
-            );
-          })}
+                </article>
+              </Link>
+            ))}
+          </div>
+
+          {products.length > 1 ? (
+            <div className="mt-3 flex items-center justify-center gap-1.5">
+              {products.map((product, index) => (
+                <button
+                  aria-label={`Ir para ${product.name}`}
+                  aria-current={activeSlide === index}
+                  className={cn(
+                    "h-1.5 rounded-full transition-all",
+                    activeSlide === index
+                      ? "w-4 bg-melier-rose"
+                      : "w-1.5 bg-black/20",
+                  )}
+                  key={product.id}
+                  onClick={() => {
+                    slideRefs.current[index]?.scrollIntoView({
+                      behavior: "smooth",
+                      inline: "start",
+                      block: "nearest",
+                    });
+                  }}
+                  type="button"
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="hidden gap-3 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          {products.map((product) => (
+            <Link
+              className="group overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft"
+              href={`/produto/${product.slug}`}
+              key={product.id}
+            >
+              <div className="relative aspect-[0.78] overflow-hidden bg-[#f7efe8]">
+                <img
+                  alt={product.name}
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                  src={getProductPrimaryImage(product)}
+                />
+              </div>
+              <div className="grid gap-1 px-3 py-3">
+                <h3 className="text-sm font-extrabold leading-tight text-melier-ink">
+                  {product.name}
+                </h3>
+                <p className="text-sm font-extrabold text-melier-ink">
+                  {formatCurrency(product.price)}
+                </p>
+              </div>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

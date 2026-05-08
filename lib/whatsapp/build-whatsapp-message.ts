@@ -1,7 +1,7 @@
 import { formatCurrency } from "@/lib/format";
-import type { CartItem } from "@/components/cart/cart-store";
+import type { CartItem } from "@/types/cart";
 
-export function buildWhatsAppMessage(items: CartItem[]) {
+export function buildWhatsAppMessage(items: CartItem[], orderNumber?: string) {
   const total = items.reduce(
     (sum, item) => sum + item.selection.price * item.quantity,
     0,
@@ -9,6 +9,7 @@ export function buildWhatsAppMessage(items: CartItem[]) {
 
   const lines = [
     "Olá, quero finalizar este pedido da Meliar:",
+    ...(orderNumber ? [`Pedido: ${orderNumber}`, ""] : []),
     "",
     ...items.flatMap((item) => {
       const subtotal = item.selection.price * item.quantity;

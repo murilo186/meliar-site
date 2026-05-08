@@ -4,9 +4,8 @@ import { PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
 import {
   CartContext,
   CartContextValue,
-  CartItem,
-  CartProductSelection,
 } from "@/components/cart/cart-store";
+import type { CartItem, CartProductSelection } from "@/types/cart";
 
 const CART_STORAGE_KEY = "melier-cart-items";
 

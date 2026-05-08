@@ -11,25 +11,24 @@ type SalesWorkbenchProps = {
 };
 
 const statusLabel: Record<AdminSalesStatus, string> = {
-  open: "Aberto",
+  pending: "Pendente",
+  approved: "Aprovado",
   paid: "Pago",
-  in_delivery: "Em entrega",
-  finished: "Finalizado",
+  delivered: "Entregue",
   cancelled: "Cancelado",
 };
 
 const statusClass: Record<AdminSalesStatus, string> = {
-  open: "bg-amber-50 text-amber-700 border-amber-200",
+  pending: "bg-amber-50 text-amber-700 border-amber-200",
+  approved: "bg-blue-50 text-blue-700 border-blue-200",
   paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  in_delivery: "bg-blue-50 text-blue-700 border-blue-200",
-  finished: "bg-black/5 text-black border-black/15",
+  delivered: "bg-black/5 text-black border-black/15",
   cancelled: "bg-red-50 text-red-700 border-red-200",
 };
 
 export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<AdminSalesStatus | "all">("all");
-  const [channelFilter, setChannelFilter] = useState<"all" | "whatsapp" | "manual">("all");
   const [page, setPage] = useState(1);
   const pageSize = 10;
 
@@ -38,10 +37,10 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
       initialOrders.filter((order) => order.status === status).length;
     return {
       total: initialOrders.length,
-      open: count("open"),
+      pending: count("pending"),
+      approved: count("approved"),
       paid: count("paid"),
-      inDelivery: count("in_delivery"),
-      finished: count("finished"),
+      delivered: count("delivered"),
       cancelled: count("cancelled"),
     };
   }, [initialOrders]);
@@ -50,13 +49,12 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
     const normalized = query.trim().toLowerCase();
     return initialOrders.filter((order) => {
       if (statusFilter !== "all" && order.status !== statusFilter) return false;
-      if (channelFilter !== "all" && order.channel !== channelFilter) return false;
       if (!normalized) return true;
       const haystack =
         `${order.orderNumber} ${order.customerName} ${order.customerPhone}`.toLowerCase();
       return haystack.includes(normalized);
     });
-  }, [initialOrders, query, statusFilter, channelFilter]);
+  }, [initialOrders, query, statusFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -67,7 +65,7 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
       <header>
         <h2 className="text-xl font-bold">Vendas</h2>
         <p className="text-sm text-muted-foreground">
-          Base mockada para validar fluxo manual de pedidos.
+          Pedidos registrados no fluxo da loja e atendimento.
         </p>
       </header>
 
@@ -78,20 +76,20 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
             <span className="font-bold">{counters.total}</span>
           </li>
           <li className="flex items-center justify-between border-b border-black/10 pb-1">
-            <span className="font-semibold">Abertos:</span>
-            <span className="font-bold">{counters.open}</span>
+            <span className="font-semibold">Pendentes:</span>
+            <span className="font-bold">{counters.pending}</span>
+          </li>
+          <li className="flex items-center justify-between border-b border-black/10 pb-1">
+            <span className="font-semibold">Aprovados:</span>
+            <span className="font-bold">{counters.approved}</span>
           </li>
           <li className="flex items-center justify-between border-b border-black/10 pb-1">
             <span className="font-semibold">Pagos:</span>
             <span className="font-bold">{counters.paid}</span>
           </li>
           <li className="flex items-center justify-between border-b border-black/10 pb-1">
-            <span className="font-semibold">Entrega:</span>
-            <span className="font-bold">{counters.inDelivery}</span>
-          </li>
-          <li className="flex items-center justify-between border-b border-black/10 pb-1">
-            <span className="font-semibold">Finalizados:</span>
-            <span className="font-bold">{counters.finished}</span>
+            <span className="font-semibold">Entregues:</span>
+            <span className="font-bold">{counters.delivered}</span>
           </li>
           <li className="flex items-center justify-between">
             <span className="font-semibold">Cancelados:</span>
@@ -101,9 +99,9 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
       </div>
 
       <div className="border border-black/10 bg-white p-3">
-        <div className="grid gap-2 md:grid-cols-[1fr_180px_150px_auto]">
+        <div className="grid gap-2 md:grid-cols-[minmax(0,1fr)_170px_auto]">
           <input
-            className="h-10 border px-3 text-sm rounded-none"
+            className="h-10 min-w-0 border px-3 text-sm rounded-none"
             onChange={(event) => {
               setQuery(event.target.value);
               setPage(1);
@@ -112,7 +110,7 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
             value={query}
           />
           <select
-            className="h-10 border px-3 text-sm rounded-none"
+            className="h-10 w-full min-w-0 border px-3 text-sm rounded-none"
             onChange={(event) => {
               setStatusFilter(event.target.value as AdminSalesStatus | "all");
               setPage(1);
@@ -120,30 +118,17 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
             value={statusFilter}
           >
             <option value="all">Todos os status</option>
-            <option value="open">Aberto</option>
+            <option value="pending">Pendente</option>
+            <option value="approved">Aprovado</option>
             <option value="paid">Pago</option>
-            <option value="in_delivery">Em entrega</option>
-            <option value="finished">Finalizado</option>
+            <option value="delivered">Entregue</option>
             <option value="cancelled">Cancelado</option>
           </select>
-          <select
-            className="h-10 border px-3 text-sm rounded-none"
-            onChange={(event) => {
-              setChannelFilter(event.target.value as "all" | "whatsapp" | "manual");
-              setPage(1);
-            }}
-            value={channelFilter}
-          >
-            <option value="all">Todos canais</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="manual">Manual</option>
-          </select>
           <Button
-            className="rounded-none"
+            className="w-full rounded-none md:w-auto"
             onClick={() => {
               setQuery("");
               setStatusFilter("all");
-              setChannelFilter("all");
               setPage(1);
             }}
             type="button"
@@ -232,4 +217,3 @@ export function SalesWorkbench({ initialOrders }: SalesWorkbenchProps) {
     </section>
   );
 }
-

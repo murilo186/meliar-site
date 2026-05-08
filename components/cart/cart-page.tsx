@@ -1,12 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
 import { Button } from "@/components/ui/button";
-import { storeConfig } from "@/config/store";
 import { formatCurrency } from "@/lib/format";
-import { buildWhatsAppUrl } from "@/lib/whatsapp/build-whatsapp-url";
 
 export function CartPage() {
   const {
@@ -19,7 +18,54 @@ export function CartPage() {
     clearCart,
   } = useCart();
 
-  const whatsappUrl = buildWhatsAppUrl(storeConfig.whatsappNumber, items);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+
+  const handleWhatsAppCheckout = async () => {
+    if (items.length === 0 || isSubmitting) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setCheckoutError(null);
+
+    try {
+      const response = await fetch("/api/checkout/whatsapp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items }),
+      });
+
+      const payload = (await response.json()) as
+        | { whatsappUrl: string }
+        | { message?: string };
+
+      if (!response.ok || !("whatsappUrl" in payload)) {
+        throw new Error(
+          "message" in payload && payload.message
+            ? payload.message
+            : "Não foi possível iniciar o atendimento no WhatsApp.",
+        );
+      }
+
+      clearCart();
+      const popup = window.open(payload.whatsappUrl, "_blank", "noopener,noreferrer");
+
+      if (!popup) {
+        window.location.href = payload.whatsappUrl;
+      }
+    } catch (error) {
+      setCheckoutError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível iniciar o atendimento no WhatsApp.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (items.length === 0) {
     return (
@@ -166,10 +212,13 @@ export function CartPage() {
             </div>
 
             <div className="mt-5 grid gap-2">
-              <Button asChild className="h-11 rounded-none">
-                <a href={whatsappUrl} rel="noreferrer" target="_blank">
-                  Finalizar no WhatsApp
-                </a>
+              <Button
+                className="h-11 rounded-none"
+                disabled={isSubmitting}
+                onClick={handleWhatsAppCheckout}
+                type="button"
+              >
+                {isSubmitting ? "Enviando pedido..." : "Finalizar no WhatsApp"}
               </Button>
               <Button
                 className="h-11 rounded-none"
@@ -180,6 +229,10 @@ export function CartPage() {
                 Limpar sacola
               </Button>
             </div>
+
+            {checkoutError ? (
+              <p className="mt-3 text-xs font-semibold text-red-600">{checkoutError}</p>
+            ) : null}
 
             <p className="mt-4 text-xs font-semibold leading-5 text-muted-foreground">
               Ao continuar, o WhatsApp abrirá com os itens do pedido para combinar entrega e pagamento.

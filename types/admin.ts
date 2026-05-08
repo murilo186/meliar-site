@@ -1,3 +1,5 @@
+import type { OrderChannel, OrderStatus } from "@/types/order";
+
 export interface AdminCategory {
   id: string;
   name: string;
@@ -33,12 +35,7 @@ export interface AdminStockRow {
   sizes: { name: string } | { name: string }[] | null;
 }
 
-export type AdminSalesStatus =
-  | "open"
-  | "paid"
-  | "in_delivery"
-  | "finished"
-  | "cancelled";
+export type AdminSalesStatus = OrderStatus;
 
 export interface AdminSalesItem {
   id: string;
@@ -54,7 +51,7 @@ export interface AdminSalesOrder {
   id: string;
   orderNumber: string;
   status: AdminSalesStatus;
-  channel: "whatsapp" | "manual";
+  channel: OrderChannel;
   customerName: string;
   customerPhone: string;
   customerEmail?: string;
@@ -68,7 +65,7 @@ export interface AdminSalesOrderSummary {
   id: string;
   orderNumber: string;
   status: AdminSalesStatus;
-  channel: "whatsapp" | "manual";
+  channel: OrderChannel;
   customerName: string;
   customerPhone: string;
   createdAt: string;

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { SalesOrderDetail } from "@/components/admin/sales-order-detail";
 import { getAdminSalesMockOrderById } from "@/data/admin-sales-mock";
+import { getAdminSalesOrderByIdFromDb } from "@/lib/admin/sales-orders";
 
 export default async function AdminSalesOrderPage({
   params,
@@ -8,7 +9,17 @@ export default async function AdminSalesOrderPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const order = getAdminSalesMockOrderById(id);
+
+  let order = null;
+  try {
+    order = await getAdminSalesOrderByIdFromDb(id);
+  } catch {
+    order = null;
+  }
+
+  if (!order) {
+    order = getAdminSalesMockOrderById(id);
+  }
 
   if (!order) {
     notFound();
@@ -16,4 +27,3 @@ export default async function AdminSalesOrderPage({
 
   return <SalesOrderDetail order={order} />;
 }
-

@@ -1,5 +1,17 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { formatCurrency } from "@/lib/format";
+import { getCustomerOrderSummaries } from "@/lib/orders/get-customer-orders";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+const orderStatusLabel = {
+  pending: "Pendente",
+  approved: "Aprovado",
+  paid: "Pago",
+  delivered: "Entregue",
+  cancelled: "Cancelado",
+} as const;
 
 export default async function ProfilePage() {
   const supabase = await createSupabaseServerClient();
@@ -18,6 +30,7 @@ export default async function ProfilePage() {
     .maybeSingle();
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
+  const orders = await getCustomerOrderSummaries(user.id);
 
   return (
     <section className="container py-6 sm:py-8">
@@ -31,9 +44,39 @@ export default async function ProfilePage() {
       <div className="grid gap-4 md:grid-cols-2">
         <article className="border border-black/10 bg-white p-4">
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-black">Pedidos</h2>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Você ainda não tem pedidos confirmados no site.
-          </p>
+          {orders.length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              Você ainda não tem pedidos registrados.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {orders.map((order) => (
+                <li className="border border-black/10 p-3" key={order.id}>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-black">{order.orderNumber}</p>
+                    <span className="text-xs font-semibold text-muted-foreground">
+                      {orderStatusLabel[order.status]}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {order.channel === "whatsapp" ? "WhatsApp" : "Manual"} •{" "}
+                    {new Date(order.createdAt).toLocaleString("pt-BR")}
+                  </p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {order.itemsCount} {order.itemsCount === 1 ? "item" : "itens"}
+                  </p>
+                  <p className="mt-2 text-sm font-semibold text-black">
+                    {formatCurrency(order.totalCents / 100)}
+                  </p>
+                  <div className="mt-3">
+                    <Button asChild className="h-9 rounded-none px-4" size="sm" variant="outline">
+                      <Link href={`/perfil/pedidos/${order.id}`}>Ver pedido</Link>
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </article>
 
         <article className="border border-black/10 bg-white p-4">
