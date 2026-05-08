@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import {
   Sheet,
   SheetClose,
@@ -76,12 +76,19 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClientOrNull();
+    if (!supabase) {
+      setIsAuthenticated(false);
+      setIsAdmin(false);
+      setFirstName("");
+      return;
+    }
+    const browserClient = supabase;
 
     async function loadUserState() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await browserClient.auth.getUser();
 
       if (!user) {
         setIsAuthenticated(false);
@@ -91,7 +98,7 @@ export function Header() {
       }
 
       setIsAuthenticated(true);
-      const { data: profile } = await supabase
+      const { data: profile } = await browserClient
         .from("profiles")
         .select("first_name,role")
         .eq("id", user.id)
@@ -125,8 +132,10 @@ export function Header() {
   }, []);
 
   async function handleLogout() {
-    const supabase = createSupabaseBrowserClient();
-    await supabase.auth.signOut();
+    const supabase = createSupabaseBrowserClientOrNull();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     setIsProfileMenuOpen(false);
     setIsAuthenticated(false);
     setIsAdmin(false);

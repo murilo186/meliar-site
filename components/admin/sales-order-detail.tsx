@@ -4,12 +4,11 @@ import { UpdateOrderStatusButton } from "@/components/admin/update-order-status-
 import { formatCurrency } from "@/lib/format";
 import { buildOrderSupportWhatsAppUrl } from "@/lib/whatsapp/build-order-support-url";
 import type { AdminSalesOrder, AdminSalesStatus } from "@/types/admin";
-import type { OrderStatus } from "@/types/order";
 
 const statusLabel: Record<AdminSalesStatus, string> = {
-  pending: "Pendente",
-  approved: "Aprovado",
-  paid: "Pago",
+  pending: "Novo",
+  approved: "Em atendimento",
+  paid: "Confirmado",
   delivered: "Entregue",
   cancelled: "Cancelado",
 };
@@ -20,14 +19,6 @@ const statusClass: Record<AdminSalesStatus, string> = {
   paid: "bg-emerald-50 text-emerald-700 border-emerald-200",
   delivered: "bg-black/5 text-black border-black/15",
   cancelled: "bg-red-50 text-red-700 border-red-200",
-};
-
-const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["approved", "cancelled"],
-  approved: ["paid", "cancelled"],
-  paid: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: [],
 };
 
 function isPersistedOrderId(orderId: string) {
@@ -50,33 +41,49 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
             {order.channel === "whatsapp" ? "WhatsApp" : "Manual"}
           </p>
         </div>
-        <span className={`inline-flex border px-2 py-0.5 text-xs ${statusClass[order.status]}`}>
-          {statusLabel[order.status]}
-        </span>
+        <Button asChild className="rounded-none" size="sm" variant="outline">
+          <Link href="/admin/vendas">Voltar para Vendas</Link>
+        </Button>
       </header>
 
-      <div className="grid gap-3 sm:grid-cols-2">
-        {order.items.map((item) => (
-          <article className="border border-black/10 bg-white p-3" key={item.id}>
-            <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
-              <img
-                alt={`${item.productName} ${item.variantLabel}`}
-                className="aspect-square w-full object-cover"
-                src={item.imageUrl}
-              />
-              <div className="min-w-0">
-                <p className="text-sm font-semibold">{item.productName}</p>
-                <p className="text-xs text-muted-foreground">{item.variantLabel}</p>
-                <p className="mt-2 text-xs text-muted-foreground">
-                  Qtd: {item.quantity} • Unitário: {formatCurrency(item.unitPriceCents / 100)}
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  Subtotal: {formatCurrency(item.subtotalCents / 100)}
-                </p>
+      <div className="border border-black/10 bg-white p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex border px-2 py-0.5 text-xs ${statusClass[order.status]}`}>
+              {statusLabel[order.status]}
+            </span>
+            {isPersistedOrderId(order.id) ? (
+              <UpdateOrderStatusButton currentStatus={order.status} orderId={order.id} />
+            ) : null}
+          </div>
+          <p className="text-sm font-semibold text-melier-ink">
+            Total do pedido: {formatCurrency(order.totalCents / 100)}
+          </p>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          {order.items.map((item) => (
+            <article className="border border-black/10 bg-white p-3" key={item.id}>
+              <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
+                <img
+                  alt={`${item.productName} ${item.variantLabel}`}
+                  className="aspect-square w-full object-cover"
+                  src={item.imageUrl}
+                />
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold">{item.productName}</p>
+                  <p className="text-xs text-muted-foreground">{item.variantLabel}</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Qtd: {item.quantity} • Unitário: {formatCurrency(item.unitPriceCents / 100)}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    Subtotal: {formatCurrency(item.subtotalCents / 100)}
+                  </p>
+                </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          ))}
+        </div>
       </div>
 
       {order.notes ? (
@@ -85,30 +92,24 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
         </div>
       ) : null}
 
-      <div className="border border-black/10 bg-white p-3">
-        <p className="text-sm font-semibold">
-          Total do pedido: {formatCurrency(order.totalCents / 100)}
-        </p>
-      </div>
-
       <div className="flex flex-wrap gap-2">
-        {isPersistedOrderId(order.id)
-          ? allowedTransitions[order.status].map((nextStatus) => (
-              <UpdateOrderStatusButton
-                key={nextStatus}
-                nextStatus={nextStatus}
-                orderId={order.id}
-              />
-            ))
-          : null}
+        {isPersistedOrderId(order.id) ? (
+          <UpdateOrderStatusButton
+            confirmLabel="Cancelar pedido"
+            confirmClassName="bg-red-600 text-white hover:bg-red-700"
+            currentStatus={order.status}
+            fixedNextStatus="cancelled"
+            orderId={order.id}
+            triggerLabel="Cancelar pedido"
+            triggerClassName="bg-red-600 text-white hover:bg-red-700"
+            triggerVariant="default"
+          />
+        ) : null}
 
         <Button asChild className="rounded-none" size="sm" variant="outline">
           <Link href={buildOrderSupportWhatsAppUrl(order.orderNumber)} target="_blank">
-            Abrir WhatsApp
+            Entrar em contato com cliente
           </Link>
-        </Button>
-        <Button asChild className="rounded-none" size="sm" variant="outline">
-          <Link href="/admin/vendas">Voltar para Vendas</Link>
         </Button>
       </div>
 

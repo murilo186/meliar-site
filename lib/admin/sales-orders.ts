@@ -41,12 +41,212 @@ type ProductImageRow = {
 
 const IMAGE_FALLBACK = "/mock/product-shirt.svg";
 
+export interface AdminSalesCounters {
+  total: number;
+  pending: number;
+  approved: number;
+  paid: number;
+  delivered: number;
+  cancelled: number;
+}
+
+export interface AdminSalesSummariesPage {
+  rows: AdminSalesOrderSummary[];
+  total: number;
+  totalPages: number;
+  page: number;
+  pageSize: number;
+  counters: AdminSalesCounters;
+}
+
+interface AdminSalesSummariesQuery {
+  page: number;
+  pageSize: number;
+  query?: string;
+  status?: AdminSalesStatus | "all";
+}
+
 function resolveCustomerName(order: OrderRow) {
   return order.customer_name?.trim() || "Cliente";
 }
 
 function resolveCustomerPhone(order: OrderRow) {
   return order.customer_phone?.trim() || "Não informado";
+}
+
+function sanitizeSearchInput(raw?: string) {
+  return (raw ?? "")
+    .trim()
+    .slice(0, 80)
+    .replace(/[",.:()\\]/g, " ");
+}
+
+function escapeIlikePattern(raw: string) {
+  return raw.replace(/[%_]/g, " ");
+}
+
+async function getOrdersCounters() {
+  const supabase = await createSupabaseServerClient();
+
+  const fetchCount = async (status?: AdminSalesStatus) => {
+    let query = supabase.from("orders").select("id", { count: "exact", head: true });
+    if (status) {
+      query = query.eq("status", status);
+    }
+
+    const { count, error } = await query;
+    if (error) {
+      throw error;
+    }
+
+    return count ?? 0;
+  };
+
+  const [total, pending, approved, paid, delivered, cancelled] = await Promise.all([
+    fetchCount(),
+    fetchCount("pending"),
+    fetchCount("approved"),
+    fetchCount("paid"),
+    fetchCount("delivered"),
+    fetchCount("cancelled"),
+  ]);
+
+  return {
+    total,
+    pending,
+    approved,
+    paid,
+    delivered,
+    cancelled,
+  } satisfies AdminSalesCounters;
+}
+
+export async function getAdminSalesSummariesPageFromDb({
+  page,
+  pageSize,
+  query,
+  status = "all",
+}: AdminSalesSummariesQuery): Promise<AdminSalesSummariesPage> {
+  const supabase = await createSupabaseServerClient();
+  const currentPage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
+  const safePageSize = Math.min(Math.max(Math.floor(pageSize), 1), 30);
+  const search = sanitizeSearchInput(query);
+
+  const applyListFilters = <
+    T extends {
+      eq: (column: string, value: unknown) => T;
+      or: (filters: string) => T;
+    },
+  >(
+    builder: T,
+  ) => {
+    let scoped = builder;
+
+    if (status !== "all") {
+      scoped = scoped.eq("status", status);
+    }
+
+    if (search) {
+      const pattern = `%${escapeIlikePattern(search)}%`;
+      scoped = scoped.or(
+        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
+      );
+    }
+
+    return scoped;
+  };
+
+  const rowsQuery = applyListFilters(
+    supabase
+      .from("orders")
+      .select("id,status,channel,customer_name,customer_phone,created_at,total_cents", {
+        count: "exact",
+      })
+      .order("created_at", { ascending: false }),
+  );
+
+  const from = (currentPage - 1) * safePageSize;
+  const to = from + safePageSize - 1;
+
+  const [{ data, error, count }, counters] = await Promise.all([
+    rowsQuery.range(from, to),
+    getOrdersCounters(),
+  ]);
+
+  if (error) {
+    throw error;
+  }
+
+  const total = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / safePageSize));
+  const safePage = Math.min(currentPage, totalPages);
+  let orders = (data ?? []) as Array<
+    Omit<OrderRow, "customer_email" | "notes"> & {
+      customer_email?: string | null;
+      notes?: string | null;
+    }
+  >;
+
+  if (safePage !== currentPage && total > 0) {
+    const safeFrom = (safePage - 1) * safePageSize;
+    const safeTo = safeFrom + safePageSize - 1;
+    const safePageQuery = applyListFilters(
+      supabase
+        .from("orders")
+        .select("id,status,channel,customer_name,customer_phone,created_at,total_cents")
+        .order("created_at", { ascending: false }),
+    );
+    const { data: safeData, error: safeError } = await safePageQuery.range(safeFrom, safeTo);
+
+    if (safeError) {
+      throw safeError;
+    }
+
+    orders = (safeData ?? []) as Array<
+      Omit<OrderRow, "customer_email" | "notes"> & {
+        customer_email?: string | null;
+        notes?: string | null;
+      }
+    >;
+  }
+
+  const orderIds = orders.map((order) => order.id);
+  const itemsCountByOrderId = new Map<string, number>();
+
+  if (orderIds.length > 0) {
+    const { data: itemsData, error: itemsError } = await supabase
+      .from("order_items")
+      .select("order_id")
+      .in("order_id", orderIds);
+
+    if (itemsError) {
+      throw itemsError;
+    }
+
+    for (const row of itemsData ?? []) {
+      const orderId = String(row.order_id);
+      itemsCountByOrderId.set(orderId, (itemsCountByOrderId.get(orderId) ?? 0) + 1);
+    }
+  }
+
+  return {
+    rows: orders.map((order) => ({
+      id: order.id,
+      orderNumber: buildOrderNumber(order.id),
+      status: order.status,
+      channel: order.channel,
+      customerName: resolveCustomerName(order as OrderRow),
+      customerPhone: resolveCustomerPhone(order as OrderRow),
+      createdAt: order.created_at,
+      totalCents: order.total_cents,
+      itemsCount: itemsCountByOrderId.get(order.id) ?? 0,
+    })),
+    total,
+    totalPages,
+    page: safePage,
+    pageSize: safePageSize,
+    counters,
+  };
 }
 
 export async function getAdminSalesSummariesFromDb(): Promise<AdminSalesOrderSummary[]> {

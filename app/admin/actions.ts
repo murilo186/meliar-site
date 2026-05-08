@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { requireAdmin } from "@/lib/admin/require-admin";
 import { getSupabaseProductsBucket } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -49,6 +50,9 @@ function applyDiscount(priceCents: number, discountPercent: number) {
 }
 
 export async function createProductAction(formData: FormData) {
+  await requireAdmin();
+
+  const redirectTo = getRedirectTarget(formData, "/admin/produtos");
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
   const composition = String(formData.get("composition") || "").trim();
@@ -64,11 +68,15 @@ export async function createProductAction(formData: FormData) {
   const discountPercent = Number(formData.get("discountPercent") || 0);
 
   if (!name || !description || !categoryId || !colorId || !priceCents || sizeIds.length === 0) {
-    return { ok: false, message: "Preencha nome, descrição, categoria, cor, tamanho e preço." };
+    redirectWithNotice(
+      redirectTo,
+      false,
+      "Preencha nome, descrição, categoria, cor, tamanho e preço.",
+    );
   }
 
   if (![0, 5, 10, 15, 20].includes(discountPercent)) {
-    return { ok: false, message: "Desconto inválido." };
+    redirectWithNotice(redirectTo, false, "Desconto inválido.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -107,7 +115,11 @@ export async function createProductAction(formData: FormData) {
     .single();
 
   if (productError || !insertedProduct) {
-    return { ok: false, message: `Erro ao criar produto: ${productError?.message}` };
+    redirectWithNotice(
+      redirectTo,
+      false,
+      `Erro ao criar produto: ${productError?.message ?? "erro desconhecido"}`,
+    );
   }
 
   const { data: colorData } = await supabase
@@ -146,17 +158,20 @@ export async function createProductAction(formData: FormData) {
       .insert(variantsToInsert);
 
     if (variantsError) {
-      return { ok: false, message: `Erro ao criar variantes: ${variantsError.message}` };
+      await supabase.from("products").delete().eq("id", insertedProduct.id);
+      redirectWithNotice(redirectTo, false, `Erro ao criar variantes: ${variantsError.message}`);
     }
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
   revalidatePath("/produtos");
-  return { ok: true, message: "Produto criado com sucesso." };
+  redirectWithNotice(redirectTo, true, "Produto criado com sucesso.");
 }
 
 export async function updateProductAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const name = String(formData.get("name") || "").trim();
   const description = String(formData.get("description") || "").trim();
@@ -201,6 +216,8 @@ export async function updateProductAction(formData: FormData) {
 }
 
 export async function addVariantAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const colorId = String(
     formData.get("colorId") || formData.get("colorIdDesktop") || "",
@@ -271,6 +288,8 @@ export async function addVariantAction(formData: FormData) {
 }
 
 export async function createColorAction(formData: FormData) {
+  await requireAdmin();
+
   const name = String(formData.get("name") || "").trim();
   const hexCodeRaw = String(formData.get("hexCode") || "").trim();
   const hexCode = hexCodeRaw.startsWith("#") ? hexCodeRaw.toUpperCase() : `#${hexCodeRaw.toUpperCase()}`;
@@ -312,6 +331,8 @@ export async function createColorAction(formData: FormData) {
 }
 
 export async function updateVariantStockAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const variantId = String(formData.get("variantId") || "").trim();
   const stockQuantity = Number(String(formData.get("stockQuantity") || "0"));
@@ -340,6 +361,8 @@ export async function updateVariantStockAction(formData: FormData) {
 }
 
 export async function deleteVariantAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const variantId = String(formData.get("variantId") || "").trim();
   const redirectTo = getRedirectTarget(formData, `/admin/produtos/${productId}`);
@@ -382,30 +405,81 @@ export async function deleteVariantAction(formData: FormData) {
 }
 
 export async function toggleProductVisibilityAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const nextVisible = String(formData.get("nextVisible") || "false") === "true";
+  const redirectTo = getRedirectTarget(formData, "/admin/produtos");
 
-  if (!productId) return;
+  if (!productId) {
+    redirectWithNotice(redirectTo, false, "Produto inválido para alterar visibilidade.");
+  }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("products").update({ is_visible: nextVisible }).eq("id", productId);
+  const { error } = await supabase
+    .from("products")
+    .update({ is_visible: nextVisible })
+    .eq("id", productId);
+
+  if (error) {
+    redirectWithNotice(redirectTo, false, `Erro ao atualizar visibilidade: ${error.message}`);
+  }
 
   revalidatePath("/admin/produtos");
   revalidatePath("/produtos");
+  redirectWithNotice(
+    redirectTo,
+    true,
+    nextVisible ? "Produto ativado no site." : "Produto ocultado no site.",
+  );
 }
 
 export async function deleteProductAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
-  if (!productId) return;
+  const redirectTo = getRedirectTarget(formData, "/admin/produtos");
+
+  if (!productId) {
+    redirectWithNotice(redirectTo, false, "Produto inválido para remoção.");
+  }
 
   const supabase = await createSupabaseServerClient();
-  await supabase.from("products").delete().eq("id", productId);
+  const { data: imagesData } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", productId);
+
+  const { error } = await supabase.from("products").delete().eq("id", productId);
+
+  if (error) {
+    redirectWithNotice(redirectTo, false, `Erro ao remover produto: ${error.message}`);
+  }
+
+  const storagePaths = (imagesData ?? [])
+    .map((row) => row.storage_path)
+    .filter((path): path is string => Boolean(path));
+
+  if (storagePaths.length > 0) {
+    const bucket = getSupabaseProductsBucket();
+    const { error: storageError } = await supabase.storage.from(bucket).remove(storagePaths);
+    if (storageError) {
+      redirectWithNotice(
+        redirectTo,
+        true,
+        "Produto removido, mas houve falha ao limpar arquivos de imagem no storage.",
+      );
+    }
+  }
 
   revalidatePath("/admin/produtos");
   revalidatePath("/produtos");
+  redirectWithNotice(redirectTo, true, "Produto removido.");
 }
 
 export async function uploadProductImagesAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const colorIdRaw = String(formData.get("colorId") || "").trim();
   const colorId = colorIdRaw || null;
@@ -490,6 +564,8 @@ export async function uploadProductImagesAction(formData: FormData) {
 }
 
 export async function setPrimaryProductImageAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const imageId = String(formData.get("imageId") || "").trim();
   const colorIdRaw = String(formData.get("colorId") || "").trim();
@@ -537,6 +613,8 @@ export async function setPrimaryProductImageAction(formData: FormData) {
 }
 
 export async function updateProductImageSortOrderAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const imageId = String(formData.get("imageId") || "").trim();
   const sortOrder = Number(String(formData.get("sortOrder") || "0"));
@@ -563,6 +641,8 @@ export async function updateProductImageSortOrderAction(formData: FormData) {
 }
 
 export async function deleteProductImageAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const imageId = String(formData.get("imageId") || "").trim();
   const redirectTo = getRedirectTarget(formData, `/admin/produtos/${productId}`);
@@ -618,12 +698,15 @@ export async function deleteProductImageAction(formData: FormData) {
 }
 
 export async function updateProductHighlightsAction(formData: FormData) {
+  await requireAdmin();
+
   const productId = String(formData.get("productId") || "").trim();
   const isHot = formData.get("isHot") === "on";
   const showInNewArrivalsManual = formData.get("showInNewArrivalsManual") === "on";
+  const redirectTo = getRedirectTarget(formData, "/admin/produtos");
 
   if (!productId) {
-    return { ok: false, message: "Produto inválido." };
+    redirectWithNotice(redirectTo, false, "Produto inválido.");
   }
 
   const supabase = await createSupabaseServerClient();
@@ -636,16 +719,18 @@ export async function updateProductHighlightsAction(formData: FormData) {
     .eq("id", productId);
 
   if (error) {
-    return { ok: false, message: `Erro ao atualizar destaque: ${error.message}` };
+    redirectWithNotice(redirectTo, false, `Erro ao atualizar destaque: ${error.message}`);
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
   revalidatePath("/");
-  return { ok: true, message: "Destaques atualizados." };
+  redirectWithNotice(redirectTo, true, "Destaques atualizados.");
 }
 
 export async function updateStockFromStockPageAction(formData: FormData) {
+  await requireAdmin();
+
   const variantId = String(formData.get("variantId") || "").trim();
   const stockQuantity = Number(String(formData.get("stockQuantity") || "0"));
   const isAvailable = formData.get("isAvailable") === "on";

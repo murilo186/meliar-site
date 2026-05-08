@@ -10,6 +10,7 @@ type ServerAction = (formData: FormData) => void | Promise<void>;
 type ProductActionsMenuProps = {
   productId: string;
   isVisible: boolean;
+  redirectTo: string;
   onToggleVisibility: ServerAction;
   onDelete: ServerAction;
 };
@@ -17,6 +18,7 @@ type ProductActionsMenuProps = {
 export function ProductActionsMenu({
   productId,
   isVisible,
+  redirectTo,
   onToggleVisibility,
   onDelete,
 }: ProductActionsMenuProps) {
@@ -45,6 +47,7 @@ export function ProductActionsMenu({
             </Button>
             <form action={onToggleVisibility}>
               <input type="hidden" name="productId" value={productId} />
+              <input type="hidden" name="redirectTo" value={redirectTo} />
               <input type="hidden" name="nextVisible" value={isVisible ? "false" : "true"} />
               <ConfirmSubmitButton
                 className="w-full justify-start rounded-none"
@@ -61,6 +64,7 @@ export function ProductActionsMenu({
             </form>
             <form action={onDelete}>
               <input type="hidden" name="productId" value={productId} />
+              <input type="hidden" name="redirectTo" value={redirectTo} />
               <ConfirmSubmitButton
                 className="w-full justify-start rounded-none"
                 confirmMessage="Tem certeza que deseja remover/deletar este item?"

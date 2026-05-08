@@ -7,9 +7,9 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildOrderSupportWhatsAppUrl } from "@/lib/whatsapp/build-order-support-url";
 
 const statusLabel = {
-  pending: "Pendente",
-  approved: "Aprovado",
-  paid: "Pago",
+  pending: "Novo",
+  approved: "Em atendimento",
+  paid: "Confirmado",
   delivered: "Entregue",
   cancelled: "Cancelado",
 } as const;

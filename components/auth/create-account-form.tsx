@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function CreateAccountForm() {
@@ -39,7 +39,12 @@ export function CreateAccountForm() {
     setFeedback(null);
     setDone(false);
 
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClientOrNull();
+    if (!supabase) {
+      setFeedback("Configuração de acesso inválida. Verifique o arquivo .env.local.");
+      setIsSubmitting(false);
+      return;
+    }
     const { error } = await supabase.auth.signUp({
       email,
       password,

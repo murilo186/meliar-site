@@ -4,7 +4,7 @@ import Link from "next/link";
 import { FormEvent, KeyboardEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
@@ -26,7 +26,12 @@ export function LoginForm() {
     setFeedback(null);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = createSupabaseBrowserClientOrNull();
+      if (!supabase) {
+        setFeedback("Configuração de acesso inválida. Verifique o arquivo .env.local.");
+        setIsSubmitting(false);
+        return;
+      }
       const {
         data: { user },
         error,

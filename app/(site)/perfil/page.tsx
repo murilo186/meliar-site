@@ -6,9 +6,9 @@ import { getCustomerOrderSummaries } from "@/lib/orders/get-customer-orders";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const orderStatusLabel = {
-  pending: "Pendente",
-  approved: "Aprovado",
-  paid: "Pago",
+  pending: "Novo",
+  approved: "Em atendimento",
+  paid: "Confirmado",
   delivered: "Entregue",
   cancelled: "Cancelado",
 } as const;

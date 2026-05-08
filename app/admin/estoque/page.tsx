@@ -17,9 +17,30 @@ type AdminStockPageProps = {
   }>;
 };
 
+function sanitizeSearchInput(raw?: string) {
+  return (raw ?? "")
+    .trim()
+    .slice(0, 80)
+    .replace(/[",.:()\\]/g, " ");
+}
+
+function escapeIlikePattern(raw: string) {
+  return raw.replace(/[%_]/g, " ");
+}
+
+function toUuidInFilter(column: string, ids: string[]) {
+  const sanitized = ids
+    .map((id) => id.replace(/[^0-9a-f-]/gi, ""))
+    .filter(Boolean);
+
+  if (sanitized.length === 0) return null;
+  return `${column}.in.(${sanitized.join(",")})`;
+}
+
 export default async function AdminStockPage({ searchParams }: AdminStockPageProps) {
   const params = await searchParams;
-  const searchQuery = (params.q ?? "").trim().toLowerCase();
+  const rawSearch = String(params.q ?? "").trim();
+  const searchQuery = sanitizeSearchInput(rawSearch);
   const onlyLow = params.onlyLow === "1";
   const onlyZero = params.onlyZero === "1";
   const onlyInactive = params.onlyInactive === "1";
@@ -32,63 +53,146 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
   const noticeMessage = params.message ?? "";
 
   const supabase = await createSupabaseServerClient();
-  const variants: AdminStockRow[] = [];
-  const batchSize = 1000;
-  let offset = 0;
-  let loadErrorMessage = "";
 
-  try {
-    while (true) {
-      const { data, error } = await supabase
-        .from("product_variants")
-        .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
-        .order("stock_quantity", { ascending: true })
-        .order("sku", { ascending: true })
-        .range(offset, offset + batchSize - 1);
-      if (error) throw error;
-      const batch = (data ?? []) as AdminStockRow[];
-      variants.push(...batch);
-      if (batch.length < batchSize) break;
-      offset += batchSize;
-    }
-  } catch (error) {
-    loadErrorMessage =
-      error instanceof Error ? error.message : "Falha ao carregar dados de estoque.";
+  const pattern = searchQuery ? `%${escapeIlikePattern(searchQuery)}%` : "";
+  let searchProductIds: string[] = [];
+  let searchColorIds: string[] = [];
+  let searchSizeIds: string[] = [];
+
+  if (pattern) {
+    const [{ data: productData }, { data: colorData }, { data: sizeData }] = await Promise.all([
+      supabase.from("products").select("id").ilike("name", pattern).limit(80),
+      supabase.from("colors").select("id").ilike("name", pattern).limit(80),
+      supabase.from("sizes").select("id").ilike("name", pattern).limit(80),
+    ]);
+
+    searchProductIds = (productData ?? []).map((row) => String(row.id));
+    searchColorIds = (colorData ?? []).map((row) => String(row.id));
+    searchSizeIds = (sizeData ?? []).map((row) => String(row.id));
   }
 
-  const { count: movementsCount } = await supabase
-    .from("inventory_movements")
-    .select("id", { count: "exact", head: true });
+  const orFilters: string[] = [];
+  if (pattern) {
+    orFilters.push(`sku.ilike.${pattern}`);
+    const productFilter = toUuidInFilter("product_id", searchProductIds);
+    const colorFilter = toUuidInFilter("color_id", searchColorIds);
+    const sizeFilter = toUuidInFilter("size_id", searchSizeIds);
+    if (productFilter) orFilters.push(productFilter);
+    if (colorFilter) orFilters.push(colorFilter);
+    if (sizeFilter) orFilters.push(sizeFilter);
+  }
 
-  const allRows = variants;
-  const filteredRows = allRows.filter((row) => {
-    const product = Array.isArray(row.products) ? row.products[0] : row.products;
-    const color = Array.isArray(row.colors) ? row.colors[0] : row.colors;
-    const size = Array.isArray(row.sizes) ? row.sizes[0] : row.sizes;
-    const haystack = `${product?.name ?? ""} ${color?.name ?? ""} ${size?.name ?? ""} ${row.sku}`.toLowerCase();
-    if (searchQuery && !haystack.includes(searchQuery)) return false;
-    if (onlyZero && row.stock_quantity !== 0) return false;
-    if (onlyLow && (row.stock_quantity <= 0 || row.stock_quantity > 3)) return false;
-    if (onlyInactive && row.is_available) return false;
-    return true;
-  });
+  let listQuery = supabase
+    .from("product_variants")
+    .select(
+      "id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)",
+      { count: "exact" },
+    )
+    .order("stock_quantity", { ascending: true })
+    .order("sku", { ascending: true });
 
-  const zeroCount = filteredRows.filter((row) => row.stock_quantity === 0).length;
-  const lowCount = filteredRows.filter((row) => row.stock_quantity > 0 && row.stock_quantity <= 3).length;
+  let zeroQuery = supabase
+    .from("product_variants")
+    .select("id", { count: "exact", head: true })
+    .eq("stock_quantity", 0);
 
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
+  let lowQuery = supabase
+    .from("product_variants")
+    .select("id", { count: "exact", head: true })
+    .gt("stock_quantity", 0)
+    .lte("stock_quantity", 3);
+
+  if (onlyZero) {
+    listQuery = listQuery.eq("stock_quantity", 0);
+    zeroQuery = zeroQuery.eq("stock_quantity", 0);
+    lowQuery = lowQuery.eq("stock_quantity", 0);
+  }
+
+  if (onlyLow) {
+    listQuery = listQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    zeroQuery = zeroQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    lowQuery = lowQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
+  }
+
+  if (onlyInactive) {
+    listQuery = listQuery.eq("is_available", false);
+    zeroQuery = zeroQuery.eq("is_available", false);
+    lowQuery = lowQuery.eq("is_available", false);
+  }
+
+  if (orFilters.length > 0) {
+    const expression = orFilters.join(",");
+    listQuery = listQuery.or(expression);
+    zeroQuery = zeroQuery.or(expression);
+    lowQuery = lowQuery.or(expression);
+  }
+
+  const [{ data, error, count }, { count: movementsCount }, { count: zeroCount }, { count: lowCount }] =
+    await Promise.all([
+      listQuery.range((page - 1) * pageSize, page * pageSize - 1),
+      supabase.from("inventory_movements").select("id", { count: "exact", head: true }),
+      zeroQuery,
+      lowQuery,
+    ]);
+
+  if (error) {
+    throw error;
+  }
+
+  const totalItems = count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(page, totalPages);
-  const start = (safePage - 1) * pageSize;
-  const pagedRows = filteredRows.slice(start, start + pageSize);
+
+  let rows = (data ?? []) as AdminStockRow[];
+
+  if (safePage !== page && totalItems > 0) {
+    let refetchQuery = supabase
+      .from("product_variants")
+      .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
+      .order("stock_quantity", { ascending: true })
+      .order("sku", { ascending: true });
+
+    if (onlyZero) {
+      refetchQuery = refetchQuery.eq("stock_quantity", 0);
+    }
+
+    if (onlyLow) {
+      refetchQuery = refetchQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    }
+
+    if (onlyInactive) {
+      refetchQuery = refetchQuery.eq("is_available", false);
+    }
+
+    if (orFilters.length > 0) {
+      refetchQuery = refetchQuery.or(orFilters.join(","));
+    }
+
+    const { data: safeData, error: safeError } = await refetchQuery.range(
+      (safePage - 1) * pageSize,
+      safePage * pageSize - 1,
+    );
+
+    if (safeError) {
+      throw safeError;
+    }
+
+    rows = (safeData ?? []) as AdminStockRow[];
+  }
 
   const baseQuery = new URLSearchParams({
-    ...(searchQuery ? { q: searchQuery } : {}),
+    ...(rawSearch ? { q: rawSearch } : {}),
     ...(onlyLow ? { onlyLow: "1" } : {}),
     ...(onlyZero ? { onlyZero: "1" } : {}),
     ...(onlyInactive ? { onlyInactive: "1" } : {}),
   });
   const currentPath = `/admin/estoque${
-    baseQuery.toString() ? `?${new URLSearchParams({ ...Object.fromEntries(baseQuery.entries()), page: String(safePage) }).toString()}` : `?page=${safePage}`
+    baseQuery.toString()
+      ? `?${new URLSearchParams({
+          ...Object.fromEntries(baseQuery.entries()),
+          page: String(safePage),
+        }).toString()}`
+      : `?page=${safePage}`
   }`;
 
   const buildPageHref = (nextPage: number) => {
@@ -128,17 +232,19 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
           <p className="whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
             Variantes
           </p>
-          <p className="text-lg font-bold leading-tight">{filteredRows.length}</p>
+          <p className="text-lg font-bold leading-tight">{totalItems}</p>
         </div>
         <div className="border border-red-200 bg-red-50 px-2 py-2 text-sm">
-          <p className="whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-red-700">Sem saldo</p>
-          <p className="text-lg font-bold leading-tight text-red-700">{zeroCount}</p>
+          <p className="whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-red-700">
+            Sem saldo
+          </p>
+          <p className="text-lg font-bold leading-tight text-red-700">{zeroCount ?? 0}</p>
         </div>
         <div className="border border-amber-200 bg-amber-50 px-2 py-2 text-sm">
           <p className="whitespace-nowrap text-[10px] uppercase tracking-[0.08em] text-amber-700">
             Baixo (1-3)
           </p>
-          <p className="text-lg font-bold leading-tight text-amber-700">{lowCount}</p>
+          <p className="text-lg font-bold leading-tight text-amber-700">{lowCount ?? 0}</p>
         </div>
       </div>
 
@@ -146,7 +252,7 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
         <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
           <input
             className="h-10 border px-3 text-sm rounded-none"
-            defaultValue={searchQuery}
+            defaultValue={rawSearch}
             name="q"
             placeholder="Buscar por produto, cor, tamanho ou SKU"
           />
@@ -168,11 +274,7 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
         </label>
       </form>
 
-      {loadErrorMessage ? (
-        <div className="border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          Não foi possível carregar o estoque agora. Detalhe: {loadErrorMessage}
-        </div>
-      ) : pagedRows.length === 0 ? (
+      {rows.length === 0 ? (
         <div className="border border-black/10 bg-white p-4 text-sm text-muted-foreground">
           Nenhuma variante encontrada para os filtros atuais.
         </div>
@@ -184,7 +286,7 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
               "use server";
               await updateStockFromStockPageAction(formData);
             }}
-            rows={pagedRows}
+            rows={rows}
           />
           <nav className="flex flex-wrap items-center justify-center gap-3 py-1">
             {safePage > 1 ? (

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function ResetPasswordForm() {
@@ -32,7 +32,12 @@ export function ResetPasswordForm() {
     setIsSubmitting(true);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = createSupabaseBrowserClientOrNull();
+      if (!supabase) {
+        setFeedback("Configuração de acesso inválida. Verifique o arquivo .env.local.");
+        setIsSubmitting(false);
+        return;
+      }
       const { error } = await supabase.auth.updateUser({ password });
 
       if (error) {

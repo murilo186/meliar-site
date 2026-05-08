@@ -5,14 +5,6 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import type { OrderStatus } from "@/types/order";
 
-const allowedTransitions: Record<OrderStatus, OrderStatus[]> = {
-  pending: ["approved", "cancelled"],
-  approved: ["paid", "cancelled"],
-  paid: ["delivered", "cancelled"],
-  delivered: [],
-  cancelled: [],
-};
-
 const allowedStatusValues: OrderStatus[] = [
   "pending",
   "approved",
@@ -32,21 +24,10 @@ export async function updateOrderStatusAction(formData: FormData) {
   const nextStatusRaw = String(formData.get("nextStatus") || "").trim();
 
   if (!orderId || !isAllowedStatus(nextStatusRaw)) {
-    return;
+    return { ok: false, message: "Dados inválidos para atualização de status." };
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: currentOrder } = await supabase
-    .from("orders")
-    .select("status")
-    .eq("id", orderId)
-    .maybeSingle();
-
-  const currentStatus = currentOrder?.status as OrderStatus | undefined;
-
-  if (!currentStatus || !allowedTransitions[currentStatus].includes(nextStatusRaw)) {
-    return;
-  }
 
   const payload: {
     status: OrderStatus;
@@ -70,10 +51,12 @@ export async function updateOrderStatusAction(formData: FormData) {
 
   const { error } = await supabase.from("orders").update(payload).eq("id", orderId);
   if (error) {
-    return;
+    return { ok: false, message: `Erro ao atualizar status: ${error.message}` };
   }
 
   revalidatePath("/admin/vendas");
   revalidatePath(`/admin/vendas/${orderId}`);
   revalidatePath("/perfil");
+  revalidatePath(`/perfil/pedidos/${orderId}`);
+  return { ok: true, message: "Status atualizado com sucesso." };
 }

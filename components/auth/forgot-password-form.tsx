@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function ForgotPasswordForm() {
@@ -18,7 +18,12 @@ export function ForgotPasswordForm() {
     setDone(false);
 
     try {
-      const supabase = createSupabaseBrowserClient();
+      const supabase = createSupabaseBrowserClientOrNull();
+      if (!supabase) {
+        setFeedback("Configuração de acesso inválida. Verifique o arquivo .env.local.");
+        setIsSubmitting(false);
+        return;
+      }
       const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${baseUrl}/redefinir-senha`,

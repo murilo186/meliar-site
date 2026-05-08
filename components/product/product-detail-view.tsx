@@ -7,7 +7,7 @@ import { useCart } from "@/components/cart/use-cart";
 import { Button } from "@/components/ui/button";
 import { getDefaultVariant } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
-import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -27,16 +27,22 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClient();
+    const supabase = createSupabaseBrowserClientOrNull();
+    if (!supabase) {
+      setIsAdmin(false);
+      return;
+    }
+    const browserClient = supabase;
+
     async function loadRole() {
       const {
         data: { user },
-      } = await supabase.auth.getUser();
+      } = await browserClient.auth.getUser();
       if (!user) {
         setIsAdmin(false);
         return;
       }
-      const { data: profile } = await supabase
+      const { data: profile } = await browserClient
         .from("profiles")
         .select("role")
         .eq("id", user.id)

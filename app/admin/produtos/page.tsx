@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { formatCurrency } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { ProductActionsMenu } from "@/components/admin/product-actions-menu";
@@ -17,7 +18,13 @@ import {
 import { Button } from "@/components/ui/button";
 
 type AdminProductsPageProps = {
-  searchParams: Promise<{ category?: string; q?: string; hidden?: string }>;
+  searchParams: Promise<{
+    category?: string;
+    q?: string;
+    hidden?: string;
+    status?: string;
+    message?: string;
+  }>;
 };
 
 export default async function AdminProductsPage({ searchParams }: AdminProductsPageProps) {
@@ -25,6 +32,15 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   const selectedCategoryId = params.category;
   const searchQuery = (params.q ?? "").trim();
   const showHiddenOnly = params.hidden === "1";
+  const noticeStatus =
+    params.status === "error" ? "error" : params.status === "success" ? "success" : null;
+  const noticeMessage = params.message ?? "";
+
+  const query = new URLSearchParams();
+  if (selectedCategoryId) query.set("category", selectedCategoryId);
+  if (searchQuery) query.set("q", searchQuery);
+  if (showHiddenOnly) query.set("hidden", "1");
+  const currentPath = `/admin/produtos${query.toString() ? `?${query.toString()}` : ""}`;
 
   const [categories, products, colors, sizes] = await Promise.all([
     getAdminCategories(),
@@ -35,6 +51,21 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
 
   return (
     <section className="space-y-4">
+      {noticeStatus && noticeMessage ? (
+        <>
+          <ClearNoticeQuery />
+          <div
+            className={`border px-3 py-2 text-sm ${
+              noticeStatus === "success"
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                : "border-red-200 bg-red-50 text-red-700"
+            }`}
+          >
+            {noticeMessage}
+          </div>
+        </>
+      ) : null}
+
       <header>
         <h2 className="text-xl font-bold">Produtos</h2>
         <p className="text-sm text-muted-foreground">
@@ -57,6 +88,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             }}
             className="grid gap-3 p-4 pt-0"
           >
+          <input type="hidden" name="redirectTo" value={currentPath} />
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm">
               <span className="font-semibold">Nome</span>
@@ -280,6 +312,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 onDelete={deleteProductAction}
                 onToggleVisibility={toggleProductVisibilityAction}
                 productId={product.id}
+                redirectTo={currentPath}
               />
             </div>
 
@@ -292,6 +325,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
                 className="space-y-2"
               >
                 <input type="hidden" name="productId" value={product.id} />
+                <input type="hidden" name="redirectTo" value={currentPath} />
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
