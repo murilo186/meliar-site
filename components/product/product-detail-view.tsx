@@ -21,6 +21,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [selectedSize, setSelectedSize] = useState("");
   const [activeImage, setActiveImage] = useState(defaultVariant.images[0]);
   const [showSizeError, setShowSizeError] = useState(false);
+  const [didAddRecently, setDidAddRecently] = useState(false);
   const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -51,8 +52,6 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
       defaultVariant,
     [defaultVariant, product.variants, selectedVariantSlug],
   );
-
-  const hasDiscount = typeof product.oldPrice === "number" && product.oldPrice > product.price;
 
   const handleVariantChange = (variantSlug: string) => {
     const variant =
@@ -125,6 +124,8 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
     });
 
     setShowSizeError(false);
+    setDidAddRecently(true);
+    window.setTimeout(() => setDidAddRecently(false), 700);
   };
 
   return (
@@ -244,11 +245,6 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 <p className="text-2xl font-black text-melier-ink">
                   {formatCurrency(product.price)}
                 </p>
-                {hasDiscount ? (
-                  <p className="pb-1 text-sm font-bold text-muted-foreground line-through">
-                    {formatCurrency(product.oldPrice!)}
-                  </p>
-                ) : null}
               </div>
 
               <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">
@@ -323,9 +319,15 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               </div>
 
               <div className="mt-6 grid gap-2">
-                <Button className="h-11 w-full rounded-none" onClick={handleAddToCart} type="button">
+                <Button
+                  className={`h-11 w-full rounded-none transition-transform duration-300 ${
+                    didAddRecently ? "scale-[1.01]" : ""
+                  }`}
+                  onClick={handleAddToCart}
+                  type="button"
+                >
                   <ShoppingBag className="h-4 w-4" />
-                  Adicionar à sacola
+                  {didAddRecently ? "Adicionado" : "Adicionar à sacola"}
                 </Button>
                 {isAdmin ? (
                   <Button asChild className="h-11 w-full rounded-none" type="button" variant="outline">

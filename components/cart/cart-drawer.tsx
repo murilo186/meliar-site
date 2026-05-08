@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Minus, Plus, ShoppingBag, Sparkles, Trash2 } from "lucide-react";
 import {
   Sheet,
   SheetClose,
@@ -19,24 +20,47 @@ export function CartDrawer() {
     items,
     itemCount,
     subtotal,
+    lastAddedSelectionId,
+    lastAddedAt,
     addItem,
     decreaseItem,
     removeItem,
     clearCart,
   } = useCart();
+  const [isPulsing, setIsPulsing] = useState(false);
+
+  useEffect(() => {
+    if (!lastAddedAt) {
+      return;
+    }
+
+    setIsPulsing(true);
+    const timeout = window.setTimeout(() => setIsPulsing(false), 700);
+
+    return () => window.clearTimeout(timeout);
+  }, [lastAddedAt]);
 
   return (
     <Sheet>
       <SheetTrigger asChild>
         <Button
           aria-label={`Sacola com ${itemCount} itens`}
-          className="relative text-melier-ink"
+          className={`relative text-melier-ink transition-transform duration-300 ${
+            isPulsing ? "scale-110" : ""
+          }`}
           size="icon"
           variant="ghost"
         >
-          <ShoppingBag className="h-5 w-5" />
+          <ShoppingBag className={`h-5 w-5 transition ${isPulsing ? "text-melier-rose" : ""}`} />
+          {isPulsing ? (
+            <Sparkles className="absolute -right-1 -top-1 h-3.5 w-3.5 text-melier-rose" />
+          ) : null}
           {itemCount > 0 ? (
-            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-melier-rose px-1 text-[10px] font-extrabold leading-none text-white">
+            <span
+              className={`absolute right-0.5 top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-melier-rose px-1 text-[10px] font-extrabold leading-none text-white ${
+                isPulsing ? "animate-pulse" : ""
+              }`}
+            >
               {itemCount}
             </span>
           ) : (
@@ -72,7 +96,11 @@ export function CartDrawer() {
               <div className="grid gap-3">
                 {items.map((item) => (
                   <article
-                    className="grid grid-cols-[76px_1fr] gap-3 rounded-2xl border bg-white p-2"
+                    className={`grid grid-cols-[76px_1fr] gap-3 rounded-2xl border bg-white p-2 transition ${
+                      lastAddedSelectionId === item.selection.id
+                        ? "ring-1 ring-melier-rose/40"
+                        : ""
+                    }`}
                     key={item.selection.id}
                   >
                     <img

@@ -103,7 +103,9 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
         </div>
         <div
           className={
-            isEditorial ? "grid gap-2" : "flex items-center justify-between gap-2"
+            isEditorial
+              ? "grid gap-2"
+              : "flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"
           }
         >
           <p
@@ -111,22 +113,23 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
               isEditorial ? "font-semibold text-melier-ink" : "font-bold text-muted-foreground"
             }`}
           >
-            {product.oldPrice ? (
-              <>
-                <span className="mr-2 line-through text-muted-foreground">
-                  {formatCurrency(product.oldPrice)}
-                </span>
-                <span>{formatCurrency(product.price)}</span>
-              </>
-            ) : (
-              isEditorial ? formatCurrency(product.price) : "Escolha cor e tamanho"
-            )}
+            {isEditorial ? formatCurrency(product.price) : "Escolha cor e tamanho"}
           </p>
-          <Button asChild className={isEditorial ? "w-full rounded-none" : undefined} size="sm" variant="outline">
+          <Button
+            asChild
+            className={isEditorial ? "w-full rounded-none" : "w-full sm:w-auto"}
+            size="sm"
+            variant="outline"
+          >
             <Link href={`/produto/${product.slug}`}>Ver peça</Link>
           </Button>
           {isAdmin ? (
-            <Button asChild className={isEditorial ? "w-full rounded-none" : undefined} size="sm" variant="outline">
+            <Button
+              asChild
+              className={isEditorial ? "w-full rounded-none" : "w-full sm:w-auto"}
+              size="sm"
+              variant="outline"
+            >
               <Link href={`/admin/produtos/editar/${product.slug}`}>Editar peça</Link>
             </Button>
           ) : null}

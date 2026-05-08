@@ -22,6 +22,8 @@ export interface CartContextValue {
   items: CartItem[];
   itemCount: number;
   subtotal: number;
+  lastAddedSelectionId: string | null;
+  lastAddedAt: number;
   addItem: (selection: CartProductSelection) => void;
   decreaseItem: (selectionId: string) => void;
   removeItem: (selectionId: string) => void;

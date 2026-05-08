@@ -12,6 +12,8 @@ const CART_STORAGE_KEY = "melier-cart-items";
 
 export function CartProvider({ children }: PropsWithChildren) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [lastAddedSelectionId, setLastAddedSelectionId] = useState<string | null>(null);
+  const [lastAddedAt, setLastAddedAt] = useState(0);
   const hasLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -37,6 +39,9 @@ export function CartProvider({ children }: PropsWithChildren) {
   }, [items]);
 
   const addItem = (selection: CartProductSelection) => {
+    setLastAddedSelectionId(selection.id);
+    setLastAddedAt(Date.now());
+
     setItems((currentItems) => {
       const existingItem = currentItems.find(
         (item) => item.selection.id === selection.id,
@@ -91,12 +96,14 @@ export function CartProvider({ children }: PropsWithChildren) {
       items,
       itemCount,
       subtotal,
+      lastAddedSelectionId,
+      lastAddedAt,
       addItem,
       decreaseItem,
       removeItem,
       clearCart,
     };
-  }, [items]);
+  }, [items, lastAddedAt, lastAddedSelectionId]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }

@@ -143,7 +143,7 @@ export function Header() {
     <header className="sticky top-0 z-[60] bg-white/88 backdrop-blur-md">
       <div>
         <div
-          className={`container grid grid-cols-[56px_1fr_56px] items-center transition-all duration-300 lg:grid-cols-[280px_1fr_280px] ${headerHeight}`}
+          className={`container grid grid-cols-[56px_1fr_auto] items-center gap-1 transition-all duration-300 lg:grid-cols-[280px_1fr_280px] ${headerHeight}`}
         >
           <div className="z-10 flex min-w-0 items-center justify-start">
             <Sheet>
@@ -318,20 +318,20 @@ export function Header() {
             />
           </Link>
 
-          <div className="z-10 flex items-center justify-end gap-1 sm:gap-2">
+          <div className="z-10 flex min-w-0 items-center justify-end gap-1 sm:gap-2">
             {isAuthenticated ? (
               <div className="relative" ref={profileMenuRef}>
                 <button
                   aria-expanded={isProfileMenuOpen}
                   aria-haspopup="menu"
-                  className="flex flex-col items-start rounded-md px-2 py-1 text-left leading-tight"
+                  className="flex max-w-[106px] flex-col items-start rounded-md px-2 py-1 text-left leading-tight sm:max-w-[150px]"
                   onClick={() => setIsProfileMenuOpen((current) => !current)}
                   type="button"
                 >
-                  <span className="text-[10px] font-medium uppercase tracking-[0.14em] text-black">
+                  <span className="hidden text-[10px] font-medium uppercase tracking-[0.14em] text-black sm:block">
                     Bem-vindo
                   </span>
-                  <span className="text-sm font-semibold text-melier-rose">{firstName}</span>
+                  <span className="w-full truncate text-sm font-semibold text-melier-rose">{firstName}</span>
                 </button>
 
                 {isProfileMenuOpen ? (

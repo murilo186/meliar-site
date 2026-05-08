@@ -3,10 +3,7 @@
 import Link from "next/link";
 import { Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  getDefaultVariant,
-  getProductPrimaryImage,
-} from "@/lib/catalog/get-products";
+import { getDefaultVariant, getProductPrimaryImage } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
 import type { Product } from "@/types/product";
 
@@ -85,24 +82,16 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
                   </div>
 
                   <div className="flex items-end justify-between gap-2">
-                    <div>
-                      <p className="text-sm font-extrabold text-melier-ink">
-                        {formatCurrency(product.price)}
-                      </p>
-                      <p className="mt-1 text-xs font-bold text-muted-foreground">
-                        {product.oldPrice ? (
-                          <span className="line-through">
-                            {formatCurrency(product.oldPrice)}
-                          </span>
-                        ) : (
-                          "Ver detalhes"
-                        )}
-                      </p>
-                    </div>
-
-                    <Button asChild className="h-8 px-3 text-[11px] uppercase tracking-[0.08em]" size="sm">
+                    <Button
+                      asChild
+                      className="h-8 px-3 text-[11px] uppercase tracking-[0.08em]"
+                      size="sm"
+                    >
                       <Link href={`/produto/${product.slug}`}>Ver peça</Link>
                     </Button>
+                    <p className="text-sm font-extrabold text-melier-ink">
+                      {formatCurrency(product.price)}
+                    </p>
                   </div>
                 </div>
               </article>
