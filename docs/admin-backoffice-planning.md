@@ -34,6 +34,45 @@ Etapa de login finalizada com entregas implementadas:
 Observação:
 - Erros de extensões do navegador e widget externo não bloqueiam a autenticação.
 
+## Atualização de status — 2026-05-08 (etapa vendas/carrinho/admin)
+
+Entregas implementadas nesta etapa:
+
+- Fluxo de pedido via WhatsApp conectado ao checkout do carrinho.
+- Criação de pedido no banco integrada ao clique de finalização.
+- Pedidos visíveis no perfil do usuário com ação para recontato via WhatsApp.
+- Tela de detalhe de pedido no admin com:
+  - atualização de status;
+  - confirmações em modal (sem `window.alert`);
+  - ação "Entrar em contato com cliente".
+- Tela de vendas ajustada para mobile:
+  - remoção de filtro de canais;
+  - correções de responsividade no filtro de status.
+- Inserção de sementes SQL para testes de pedidos e ajuste de colisão por `order_number`.
+- Remoção de dependência de dados mockados para vendas/admin.
+- Segurança e robustez no admin:
+  - ações server-side com validação de role admin;
+  - feedback de ações por `status/message` na URL;
+  - deleção de produto com limpeza de imagens no storage.
+- Performance inicial no admin:
+  - paginação server-side em estoque;
+  - paginação compacta (janela de páginas com reticências);
+  - contadores de vendas/estoque preparados via RPC SQL com fallback;
+  - otimização da listagem de produtos (mapa de categorias em memória).
+
+Arquivos SQL novos para suporte:
+
+- `supabase/seed-orders-sample.sql`
+- `supabase/alter-orders-whatsapp-flow.sql`
+- `supabase/alter-admin-metrics-rpc.sql`
+
+Próximo bloco sugerido (após fechamento visual da loja):
+
+1. Consolidar otimização de consultas (índices e análise de plano).
+2. Fechar revisão de RLS/policies nas tabelas de admin, pedidos e estoque.
+3. Revisar middleware/ambiente de deploy para evitar regressões em produção.
+4. Rodar checklist final de segurança e observabilidade mínima.
+
 ## Regras já alinhadas
 
 - Imagens: máximo de 3 fotos por cor.

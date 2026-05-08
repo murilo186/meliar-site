@@ -48,6 +48,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
     getAdminColors(),
     getAdminSizes(),
   ]);
+  const categoriesById = new Map(categories.map((category) => [category.id, category.displayName]));
 
   return (
     <section className="space-y-4">
@@ -282,7 +283,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
               <div>
                 <h3 className="text-base font-bold">{product.name}</h3>
                 <p className="text-xs text-muted-foreground">
-                  {categories.find((category) => category.id === product.categoryId)?.displayName ??
+                  {categoriesById.get(product.categoryId) ??
                     product.categoryName}{" "}
                 </p>
                 <p className="mt-1 text-sm font-semibold">

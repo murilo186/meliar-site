@@ -37,6 +37,40 @@ function toUuidInFilter(column: string, ids: string[]) {
   return `${column}.in.(${sanitized.join(",")})`;
 }
 
+function toCounterNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed);
+    }
+  }
+
+  return 0;
+}
+
+function buildPageWindow(currentPage: number, totalPages: number) {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => index + 1);
+  }
+
+  const start = Math.max(1, currentPage - 2);
+  const end = Math.min(totalPages, currentPage + 2);
+
+  if (start <= 2) {
+    return [1, 2, 3, 4, 5, 0, totalPages];
+  }
+
+  if (end >= totalPages - 1) {
+    return [1, 0, totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+  }
+
+  return [1, 0, ...Array.from({ length: end - start + 1 }, (_, idx) => start + idx), 0, totalPages];
+}
+
 export default async function AdminStockPage({ searchParams }: AdminStockPageProps) {
   const params = await searchParams;
   const rawSearch = String(params.q ?? "").trim();
@@ -82,91 +116,98 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
     if (sizeFilter) orFilters.push(sizeFilter);
   }
 
-  let listQuery = supabase
-    .from("product_variants")
-    .select(
-      "id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)",
-      { count: "exact" },
-    )
-    .order("stock_quantity", { ascending: true })
-    .order("sku", { ascending: true });
+  const applyVariantFilters = (builder: any) => {
+    let scoped: any = builder;
 
-  let zeroQuery = supabase
-    .from("product_variants")
-    .select("id", { count: "exact", head: true })
-    .eq("stock_quantity", 0);
+    if (onlyZero) {
+      scoped = scoped.eq("stock_quantity", 0);
+    }
 
-  let lowQuery = supabase
-    .from("product_variants")
-    .select("id", { count: "exact", head: true })
-    .gt("stock_quantity", 0)
-    .lte("stock_quantity", 3);
+    if (onlyLow) {
+      scoped = scoped.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    }
 
-  if (onlyZero) {
-    listQuery = listQuery.eq("stock_quantity", 0);
-    zeroQuery = zeroQuery.eq("stock_quantity", 0);
-    lowQuery = lowQuery.eq("stock_quantity", 0);
-  }
+    if (onlyInactive) {
+      scoped = scoped.eq("is_available", false);
+    }
 
-  if (onlyLow) {
-    listQuery = listQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
-    zeroQuery = zeroQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
-    lowQuery = lowQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
-  }
+    if (orFilters.length > 0) {
+      scoped = scoped.or(orFilters.join(","));
+    }
 
-  if (onlyInactive) {
-    listQuery = listQuery.eq("is_available", false);
-    zeroQuery = zeroQuery.eq("is_available", false);
-    lowQuery = lowQuery.eq("is_available", false);
-  }
+    return scoped;
+  };
 
-  if (orFilters.length > 0) {
-    const expression = orFilters.join(",");
-    listQuery = listQuery.or(expression);
-    zeroQuery = zeroQuery.or(expression);
-    lowQuery = lowQuery.or(expression);
-  }
+  const listQuery = applyVariantFilters(
+    supabase
+      .from("product_variants")
+      .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
+      .order("stock_quantity", { ascending: true })
+      .order("sku", { ascending: true }),
+  );
 
-  const [{ data, error, count }, { count: movementsCount }, { count: zeroCount }, { count: lowCount }] =
+  const [{ data, error }, { count: movementsCount }, { data: rpcCountersData, error: rpcCountersError }] =
     await Promise.all([
       listQuery.range((page - 1) * pageSize, page * pageSize - 1),
       supabase.from("inventory_movements").select("id", { count: "exact", head: true }),
-      zeroQuery,
-      lowQuery,
+      supabase.rpc("admin_stock_counters", {
+        p_search: searchQuery || null,
+        p_only_low: onlyLow,
+        p_only_zero: onlyZero,
+        p_only_inactive: onlyInactive,
+      }),
     ]);
 
   if (error) {
     throw error;
   }
 
-  const totalItems = count ?? 0;
+  let totalItems = 0;
+  let zeroCount = 0;
+  let lowCount = 0;
+
+  if (!rpcCountersError && Array.isArray(rpcCountersData) && rpcCountersData.length > 0) {
+    const countersRow = rpcCountersData[0] as Record<string, unknown>;
+    totalItems = toCounterNumber(countersRow.total);
+    zeroCount = toCounterNumber(countersRow.zero_count);
+    lowCount = toCounterNumber(countersRow.low_count);
+  } else {
+    const [totalResult, zeroResult, lowResult] = await Promise.all([
+      applyVariantFilters(supabase.from("product_variants").select("id", { count: "exact", head: true })),
+      applyVariantFilters(
+        supabase.from("product_variants").select("id", { count: "exact", head: true }).eq("stock_quantity", 0),
+      ),
+      applyVariantFilters(
+        supabase
+          .from("product_variants")
+          .select("id", { count: "exact", head: true })
+          .gt("stock_quantity", 0)
+          .lte("stock_quantity", 3),
+      ),
+    ]);
+
+    if (totalResult.error) throw totalResult.error;
+    if (zeroResult.error) throw zeroResult.error;
+    if (lowResult.error) throw lowResult.error;
+
+    totalItems = totalResult.count ?? 0;
+    zeroCount = zeroResult.count ?? 0;
+    lowCount = lowResult.count ?? 0;
+  }
+
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
   const safePage = Math.min(page, totalPages);
 
   let rows = (data ?? []) as AdminStockRow[];
 
   if (safePage !== page && totalItems > 0) {
-    let refetchQuery = supabase
-      .from("product_variants")
-      .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
-      .order("stock_quantity", { ascending: true })
-      .order("sku", { ascending: true });
-
-    if (onlyZero) {
-      refetchQuery = refetchQuery.eq("stock_quantity", 0);
-    }
-
-    if (onlyLow) {
-      refetchQuery = refetchQuery.gt("stock_quantity", 0).lte("stock_quantity", 3);
-    }
-
-    if (onlyInactive) {
-      refetchQuery = refetchQuery.eq("is_available", false);
-    }
-
-    if (orFilters.length > 0) {
-      refetchQuery = refetchQuery.or(orFilters.join(","));
-    }
+    const refetchQuery = applyVariantFilters(
+      supabase
+        .from("product_variants")
+        .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
+        .order("stock_quantity", { ascending: true })
+        .order("sku", { ascending: true }),
+    );
 
     const { data: safeData, error: safeError } = await refetchQuery.range(
       (safePage - 1) * pageSize,
@@ -202,6 +243,7 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
     const qs = query.toString();
     return `/admin/estoque${qs ? `?${qs}` : ""}`;
   };
+  const pageWindow = buildPageWindow(safePage, totalPages);
 
   return (
     <section className="space-y-4">
@@ -297,8 +339,12 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
               <span className="text-sm font-semibold text-muted-foreground">{"<"}</span>
             )}
             <div className="flex items-center gap-2">
-              {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) =>
-                pageNumber === safePage ? (
+              {pageWindow.map((pageNumber, index) =>
+                pageNumber === 0 ? (
+                  <span className="text-sm text-muted-foreground" key={`ellipsis-${index}`}>
+                    ...
+                  </span>
+                ) : pageNumber === safePage ? (
                   <span className="text-sm font-bold text-melier-ink" key={pageNumber}>
                     {pageNumber}
                   </span>

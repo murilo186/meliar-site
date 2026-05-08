@@ -85,8 +85,37 @@ function escapeIlikePattern(raw: string) {
   return raw.replace(/[%_]/g, " ");
 }
 
-async function getOrdersCounters() {
+function toCounterNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.max(0, Math.floor(value));
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseInt(value, 10);
+    if (Number.isFinite(parsed)) {
+      return Math.max(0, parsed);
+    }
+  }
+
+  return 0;
+}
+
+async function getOrdersCounters(): Promise<AdminSalesCounters> {
   const supabase = await createSupabaseServerClient();
+  const { data: rpcData, error: rpcError } = await supabase.rpc("admin_orders_counters");
+
+  if (!rpcError && Array.isArray(rpcData) && rpcData.length > 0) {
+    const row = rpcData[0] as Record<string, unknown>;
+
+    return {
+      total: toCounterNumber(row.total),
+      pending: toCounterNumber(row.pending),
+      approved: toCounterNumber(row.approved),
+      paid: toCounterNumber(row.paid),
+      delivered: toCounterNumber(row.delivered),
+      cancelled: toCounterNumber(row.cancelled),
+    };
+  }
 
   const fetchCount = async (status?: AdminSalesStatus) => {
     let query = supabase.from("orders").select("id", { count: "exact", head: true });
@@ -118,7 +147,7 @@ async function getOrdersCounters() {
     paid,
     delivered,
     cancelled,
-  } satisfies AdminSalesCounters;
+  };
 }
 
 export async function getAdminSalesSummariesPageFromDb({
@@ -132,38 +161,23 @@ export async function getAdminSalesSummariesPageFromDb({
   const safePageSize = Math.min(Math.max(Math.floor(pageSize), 1), 30);
   const search = sanitizeSearchInput(query);
 
-  const applyListFilters = <
-    T extends {
-      eq: (column: string, value: unknown) => T;
-      or: (filters: string) => T;
-    },
-  >(
-    builder: T,
-  ) => {
-    let scoped = builder;
+  let rowsQuery: any = supabase
+    .from("orders")
+    .select("id,status,channel,customer_name,customer_phone,created_at,total_cents", {
+      count: "exact",
+    })
+    .order("created_at", { ascending: false });
 
-    if (status !== "all") {
-      scoped = scoped.eq("status", status);
-    }
+  if (status !== "all") {
+    rowsQuery = rowsQuery.eq("status", status);
+  }
 
-    if (search) {
-      const pattern = `%${escapeIlikePattern(search)}%`;
-      scoped = scoped.or(
-        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
-      );
-    }
-
-    return scoped;
-  };
-
-  const rowsQuery = applyListFilters(
-    supabase
-      .from("orders")
-      .select("id,status,channel,customer_name,customer_phone,created_at,total_cents", {
-        count: "exact",
-      })
-      .order("created_at", { ascending: false }),
-  );
+  if (search) {
+    const pattern = `%${escapeIlikePattern(search)}%`;
+    rowsQuery = rowsQuery.or(
+      `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
+    );
+  }
 
   const from = (currentPage - 1) * safePageSize;
   const to = from + safePageSize - 1;
@@ -190,12 +204,22 @@ export async function getAdminSalesSummariesPageFromDb({
   if (safePage !== currentPage && total > 0) {
     const safeFrom = (safePage - 1) * safePageSize;
     const safeTo = safeFrom + safePageSize - 1;
-    const safePageQuery = applyListFilters(
-      supabase
-        .from("orders")
-        .select("id,status,channel,customer_name,customer_phone,created_at,total_cents")
-        .order("created_at", { ascending: false }),
-    );
+    let safePageQuery: any = supabase
+      .from("orders")
+      .select("id,status,channel,customer_name,customer_phone,created_at,total_cents")
+      .order("created_at", { ascending: false });
+
+    if (status !== "all") {
+      safePageQuery = safePageQuery.eq("status", status);
+    }
+
+    if (search) {
+      const pattern = `%${escapeIlikePattern(search)}%`;
+      safePageQuery = safePageQuery.or(
+        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
+      );
+    }
+
     const { data: safeData, error: safeError } = await safePageQuery.range(safeFrom, safeTo);
 
     if (safeError) {
