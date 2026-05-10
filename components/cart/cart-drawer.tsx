@@ -11,7 +11,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { useAuthAction } from "@/components/providers/auth-action-provider";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { useCart } from "@/components/cart/use-cart";
@@ -28,7 +27,6 @@ export function CartDrawer() {
     removeItem,
     clearCart,
   } = useCart();
-  const { requireAuth } = useAuthAction();
   const [isPulsing, setIsPulsing] = useState(false);
 
   useEffect(() => {
@@ -126,10 +124,7 @@ export function CartDrawer() {
                         <button
                           aria-label={`Remover ${item.selection.name}`}
                           className="rounded-full p-1.5 text-muted-foreground hover:bg-secondary hover:text-melier-rose"
-                          onClick={() => {
-                            if (!requireAuth("editar sua sacola")) return;
-                            removeItem(item.selection.id);
-                          }}
+                          onClick={() => removeItem(item.selection.id)}
                           type="button"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -140,10 +135,7 @@ export function CartDrawer() {
                           <button
                             aria-label={`Diminuir quantidade de ${item.selection.name}`}
                             className="p-2 text-melier-ink hover:text-melier-rose"
-                            onClick={() => {
-                              if (!requireAuth("editar sua sacola")) return;
-                              decreaseItem(item.selection.id);
-                            }}
+                            onClick={() => decreaseItem(item.selection.id)}
                             type="button"
                           >
                             <Minus className="h-3.5 w-3.5" />
@@ -154,10 +146,7 @@ export function CartDrawer() {
                           <button
                             aria-label={`Aumentar quantidade de ${item.selection.name}`}
                             className="p-2 text-melier-ink hover:text-melier-rose"
-                            onClick={() => {
-                              if (!requireAuth("editar sua sacola")) return;
-                              addItem(item.selection);
-                            }}
+                            onClick={() => addItem(item.selection)}
                             type="button"
                           >
                             <Plus className="h-3.5 w-3.5" />
@@ -193,10 +182,7 @@ export function CartDrawer() {
               </SheetClose>
               <button
                 className="mt-3 w-full text-center text-xs font-extrabold uppercase tracking-[0.12em] text-muted-foreground hover:text-melier-rose"
-                onClick={() => {
-                  if (!requireAuth("limpar sua sacola")) return;
-                  clearCart();
-                }}
+                onClick={clearCart}
                 type="button"
               >
                 Limpar sacola

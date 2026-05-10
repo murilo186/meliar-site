@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
-import { useAuthAction } from "@/components/providers/auth-action-provider";
 import { Button } from "@/components/ui/button";
 import { getDefaultVariant } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
@@ -25,7 +24,6 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [didAddRecently, setDidAddRecently] = useState(false);
   const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
-  const { requireAuth } = useAuthAction();
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -115,10 +113,6 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   };
 
   const handleAddToCart = () => {
-    if (!requireAuth("adicionar peças à sacola")) {
-      return;
-    }
-
     if (!selectedSize) {
       setShowSizeError(true);
       return;

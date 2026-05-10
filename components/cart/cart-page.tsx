@@ -143,10 +143,7 @@ export function CartPage() {
                       <button
                         aria-label={`Remover ${item.selection.name}`}
                         className="p-1 text-muted-foreground transition hover:text-melier-rose"
-                        onClick={() => {
-                          if (!requireAuth("editar sua sacola")) return;
-                          removeItem(item.selection.id);
-                        }}
+                        onClick={() => removeItem(item.selection.id)}
                         type="button"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -158,10 +155,7 @@ export function CartPage() {
                         <button
                           aria-label={`Diminuir quantidade de ${item.selection.name}`}
                           className="flex h-10 w-10 items-center justify-center text-melier-ink transition hover:text-melier-rose"
-                          onClick={() => {
-                            if (!requireAuth("editar sua sacola")) return;
-                            decreaseItem(item.selection.id);
-                          }}
+                          onClick={() => decreaseItem(item.selection.id)}
                           type="button"
                         >
                           <Minus className="h-4 w-4" />
@@ -172,10 +166,7 @@ export function CartPage() {
                         <button
                           aria-label={`Aumentar quantidade de ${item.selection.name}`}
                           className="flex h-10 w-10 items-center justify-center text-melier-ink transition hover:text-melier-rose"
-                          onClick={() => {
-                            if (!requireAuth("editar sua sacola")) return;
-                            addItem(item.selection);
-                          }}
+                          onClick={() => addItem(item.selection)}
                           type="button"
                         >
                           <Plus className="h-4 w-4" />
@@ -237,10 +228,7 @@ export function CartPage() {
               </Button>
               <Button
                 className="h-11 rounded-none"
-                onClick={() => {
-                  if (!requireAuth("limpar sua sacola")) return;
-                  clearCart();
-                }}
+                onClick={clearCart}
                 type="button"
                 variant="outline"
               >
