@@ -174,6 +174,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       id: index + 1,
       slug: productRow.slug,
       name: productRow.name,
+      isHot: productRow.is_hot,
       category: categoryName,
       categorySlug,
       price: toCurrency(productRow.price_cents),

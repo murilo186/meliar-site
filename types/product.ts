@@ -9,6 +9,7 @@ export interface Product {
   id: number;
   slug: string;
   name: string;
+  isHot?: boolean;
   category: string;
   categorySlug: string;
   subcategory?: string;
