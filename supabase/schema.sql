@@ -141,6 +141,14 @@ before update on public.products
 for each row
 execute function public.set_updated_at();
 
+create table if not exists public.user_favorites (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users(id) on delete cascade,
+  product_slug text not null references public.products(slug) on delete cascade,
+  created_at timestamptz not null default now(),
+  unique (user_id, product_slug)
+);
+
 create table if not exists public.colors (
   id uuid primary key default gen_random_uuid(),
   name text not null,
@@ -356,6 +364,7 @@ create index if not exists idx_categories_active_sort on public.categories(is_ac
 create index if not exists idx_products_category on public.products(category_id);
 create index if not exists idx_products_visible_created on public.products(is_visible, created_at desc);
 create index if not exists idx_products_new_arrivals on public.products(created_at desc);
+create index if not exists idx_user_favorites_user_created on public.user_favorites(user_id, created_at desc);
 create index if not exists idx_product_variants_product on public.product_variants(product_id);
 create index if not exists idx_product_variants_color on public.product_variants(color_id);
 create index if not exists idx_product_variants_size on public.product_variants(size_id);
@@ -385,6 +394,7 @@ order by p.created_at desc;
 -- RLS
 -- =========================================================
 alter table public.profiles enable row level security;
+alter table public.user_favorites enable row level security;
 alter table public.categories enable row level security;
 alter table public.products enable row level security;
 alter table public.colors enable row level security;
@@ -422,6 +432,28 @@ with check (
     else auth.uid() = id and role = 'customer'
   end
 );
+
+-- Favorites
+drop policy if exists user_favorites_select_own on public.user_favorites;
+create policy user_favorites_select_own
+on public.user_favorites
+for select
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists user_favorites_insert_own on public.user_favorites;
+create policy user_favorites_insert_own
+on public.user_favorites
+for insert
+to authenticated
+with check (auth.uid() = user_id or public.is_admin());
+
+drop policy if exists user_favorites_delete_own on public.user_favorites;
+create policy user_favorites_delete_own
+on public.user_favorites
+for delete
+to authenticated
+using (auth.uid() = user_id or public.is_admin());
 
 -- Public catalog read
 drop policy if exists categories_public_read on public.categories;

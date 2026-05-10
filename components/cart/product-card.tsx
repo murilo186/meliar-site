@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
+import { useFavorites } from "@/components/providers/favorites-provider";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import {
@@ -22,7 +23,9 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const defaultVariant = getDefaultVariant(product);
   const productImage = getProductPrimaryImage(product);
   const colorCount = product.variants.length;
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdmin, setIsAdmin] = useState(false);
+  const isFavorited = isFavorite(product.slug);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClientOrNull();
@@ -75,13 +78,22 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
             </span>
           ) : null}
           <Button
-            aria-label="Favoritar"
-            className="absolute right-2 top-2 bg-white/90 text-melier-ink hover:bg-white hover:text-melier-rose"
+            aria-label={isFavorited ? "Remover dos favoritos" : "Favoritar"}
+            className={`absolute right-2 top-2 ${
+              isFavorited
+                ? "bg-melier-rose text-white hover:bg-melier-rose/90"
+                : "bg-white/90 text-melier-ink hover:bg-white hover:text-melier-rose"
+            }`}
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              void toggleFavorite(product.slug);
+            }}
             size="icon"
             type="button"
             variant="ghost"
           >
-            <Heart className="h-4 w-4" />
+            <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
           </Button>
         </div>
       </Link>

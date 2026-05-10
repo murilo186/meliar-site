@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, LogOut, Menu, Search, Shield, User } from "lucide-react";
+import { ChevronDown, Heart, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
 import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
@@ -352,6 +352,14 @@ export function Header() {
                     >
                       <User className="h-4 w-4" />
                       Perfil
+                    </Link>
+                    <Link
+                      className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
+                      href="/perfil#favoritos"
+                      onClick={() => setIsProfileMenuOpen(false)}
+                    >
+                      <Heart className="h-4 w-4" />
+                      Favoritos
                     </Link>
                     {isAdmin ? (
                       <Link

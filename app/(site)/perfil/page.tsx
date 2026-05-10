@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { CatalogGrid } from "@/components/catalog/catalog-grid";
 import { Button } from "@/components/ui/button";
+import { getUserFavoriteProducts } from "@/lib/favorites/get-user-favorite-products";
 import { formatCurrency } from "@/lib/format";
 import { getCustomerOrderSummaries } from "@/lib/orders/get-customer-orders";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -30,7 +32,10 @@ export default async function ProfilePage() {
     .maybeSingle();
 
   const fullName = [profile?.first_name, profile?.last_name].filter(Boolean).join(" ").trim();
-  const orders = await getCustomerOrderSummaries(user.id);
+  const [orders, favoriteProducts] = await Promise.all([
+    getCustomerOrderSummaries(user.id),
+    getUserFavoriteProducts(user.id),
+  ]);
 
   return (
     <section className="container py-6 sm:py-8">
@@ -40,6 +45,22 @@ export default async function ProfilePage() {
           {fullName || "Cliente"} • {user.email}
         </p>
       </header>
+
+      <article className="mb-4 border border-black/10 bg-white p-4" id="favoritos">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-black">Favoritos</h2>
+          <Button asChild className="h-8 rounded-none px-3" size="sm" variant="outline">
+            <Link href="/produtos">Ver produtos</Link>
+          </Button>
+        </div>
+        {favoriteProducts.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            Você ainda não favoritou peças. Toque no coração de um produto para salvar aqui.
+          </p>
+        ) : (
+          <CatalogGrid products={favoriteProducts} variant="editorial" />
+        )}
+      </article>
 
       <div className="grid gap-4 md:grid-cols-2">
         <article className="border border-black/10 bg-white p-4">

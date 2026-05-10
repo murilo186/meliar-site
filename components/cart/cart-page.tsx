@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
+import { useAuthAction } from "@/components/providers/auth-action-provider";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 
@@ -17,11 +18,16 @@ export function CartPage() {
     removeItem,
     clearCart,
   } = useCart();
+  const { requireAuth } = useAuthAction();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
 
   const handleWhatsAppCheckout = async () => {
+    if (!requireAuth("finalizar seu pedido no WhatsApp")) {
+      return;
+    }
+
     if (items.length === 0 || isSubmitting) {
       return;
     }
@@ -137,7 +143,10 @@ export function CartPage() {
                       <button
                         aria-label={`Remover ${item.selection.name}`}
                         className="p-1 text-muted-foreground transition hover:text-melier-rose"
-                        onClick={() => removeItem(item.selection.id)}
+                        onClick={() => {
+                          if (!requireAuth("editar sua sacola")) return;
+                          removeItem(item.selection.id);
+                        }}
                         type="button"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -149,7 +158,10 @@ export function CartPage() {
                         <button
                           aria-label={`Diminuir quantidade de ${item.selection.name}`}
                           className="flex h-10 w-10 items-center justify-center text-melier-ink transition hover:text-melier-rose"
-                          onClick={() => decreaseItem(item.selection.id)}
+                          onClick={() => {
+                            if (!requireAuth("editar sua sacola")) return;
+                            decreaseItem(item.selection.id);
+                          }}
                           type="button"
                         >
                           <Minus className="h-4 w-4" />
@@ -160,7 +172,10 @@ export function CartPage() {
                         <button
                           aria-label={`Aumentar quantidade de ${item.selection.name}`}
                           className="flex h-10 w-10 items-center justify-center text-melier-ink transition hover:text-melier-rose"
-                          onClick={() => addItem(item.selection)}
+                          onClick={() => {
+                            if (!requireAuth("editar sua sacola")) return;
+                            addItem(item.selection);
+                          }}
                           type="button"
                         >
                           <Plus className="h-4 w-4" />
@@ -222,7 +237,10 @@ export function CartPage() {
               </Button>
               <Button
                 className="h-11 rounded-none"
-                onClick={clearCart}
+                onClick={() => {
+                  if (!requireAuth("limpar sua sacola")) return;
+                  clearCart();
+                }}
                 type="button"
                 variant="outline"
               >
