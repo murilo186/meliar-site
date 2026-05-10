@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import type { CartItem } from "@/types/cart";
 
+const CHECKOUT_CONTEXT_STORAGE_KEY = "meliar-last-checkout";
+
 interface CheckoutValidationIssue {
   selectionId: string;
   productSlug: string;
@@ -28,6 +30,54 @@ interface CheckoutValidationResponse {
   issues: CheckoutValidationIssue[];
 }
 
+interface CheckoutStartResponse {
+  orderId: string;
+  orderNumber: string;
+  whatsappUrl: string;
+}
+
+interface CheckoutContext {
+  orderId: string;
+  orderNumber: string;
+  whatsappUrl: string;
+  createdAt: string;
+}
+
+function persistCheckoutContext(value: CheckoutContext | null) {
+  try {
+    if (!value) {
+      window.sessionStorage.removeItem(CHECKOUT_CONTEXT_STORAGE_KEY);
+      return;
+    }
+
+    window.sessionStorage.setItem(
+      CHECKOUT_CONTEXT_STORAGE_KEY,
+      JSON.stringify(value),
+    );
+  } catch {
+    // Ignore storage failures in private mode or restricted contexts.
+  }
+}
+
+function loadCheckoutContext() {
+  try {
+    const raw = window.sessionStorage.getItem(CHECKOUT_CONTEXT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CheckoutContext;
+    if (!parsed?.orderId || !parsed?.orderNumber || !parsed?.whatsappUrl) {
+      return null;
+    }
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function tryOpenWhatsApp(url: string) {
+  const popup = window.open(url, "_blank", "noopener,noreferrer");
+  return Boolean(popup);
+}
+
 export function CartPage() {
   const {
     items,
@@ -43,9 +93,20 @@ export function CartPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isValidatingCart, setIsValidatingCart] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [whatsAppOpenWarning, setWhatsAppOpenWarning] = useState<string | null>(null);
   const [cartValidation, setCartValidation] = useState<CheckoutValidationResponse | null>(
     null,
   );
+  const [checkoutContext, setCheckoutContext] = useState<CheckoutContext | null>(null);
+
+  useEffect(() => {
+    setCheckoutContext(loadCheckoutContext());
+  }, []);
+
+  const clearCheckoutContext = useCallback(() => {
+    setCheckoutContext(null);
+    persistCheckoutContext(null);
+  }, []);
 
   const requestCartValidation = useCallback(async (snapshot: CartItem[]) => {
     if (snapshot.length === 0) {
@@ -110,6 +171,22 @@ export function CartPage() {
     void requestCartValidation(items);
   }, [items, requestCartValidation]);
 
+  const handleOpenWhatsAppAgain = () => {
+    if (!checkoutContext) {
+      return;
+    }
+
+    const opened = tryOpenWhatsApp(checkoutContext.whatsappUrl);
+    if (opened) {
+      setWhatsAppOpenWarning(null);
+      return;
+    }
+
+    setWhatsAppOpenWarning(
+      "Não foi possível abrir automaticamente. Use o botão abaixo para abrir no mesmo navegador.",
+    );
+  };
+
   const handleWhatsAppCheckout = async () => {
     if (!requireAuth("finalizar seu pedido no WhatsApp")) {
       return;
@@ -133,6 +210,7 @@ export function CartPage() {
 
     setIsSubmitting(true);
     setCheckoutError(null);
+    setWhatsAppOpenWarning(null);
 
     try {
       const response = await fetch("/api/checkout/whatsapp", {
@@ -144,7 +222,7 @@ export function CartPage() {
       });
 
       const payload = (await response.json()) as
-        | { whatsappUrl: string }
+        | CheckoutStartResponse
         | { message?: string };
 
       if (!response.ok || !("whatsappUrl" in payload)) {
@@ -155,12 +233,23 @@ export function CartPage() {
         );
       }
 
+      const context: CheckoutContext = {
+        orderId: payload.orderId,
+        orderNumber: payload.orderNumber,
+        whatsappUrl: payload.whatsappUrl,
+        createdAt: new Date().toISOString(),
+      };
+
+      setCheckoutContext(context);
+      persistCheckoutContext(context);
       clearCart();
       setCartValidation(null);
-      const popup = window.open(payload.whatsappUrl, "_blank", "noopener,noreferrer");
 
-      if (!popup) {
-        window.location.href = payload.whatsappUrl;
+      const opened = tryOpenWhatsApp(payload.whatsappUrl);
+      if (!opened) {
+        setWhatsAppOpenWarning(
+          "Seu pedido foi criado, mas o WhatsApp não abriu automaticamente.",
+        );
       }
     } catch (error) {
       setCheckoutError(
@@ -177,6 +266,44 @@ export function CartPage() {
     return (
       <section className="bg-white py-8 sm:py-10">
         <div className="container max-w-3xl">
+          {checkoutContext ? (
+            <div className="mb-4 border border-emerald-300 bg-emerald-50 p-4">
+              <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+                Pedido criado
+              </p>
+              <p className="mt-1 text-sm font-semibold text-emerald-800">
+                Número do pedido: {checkoutContext.orderNumber}
+              </p>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <Button className="h-10 rounded-none" onClick={handleOpenWhatsAppAgain} type="button">
+                  Abrir WhatsApp
+                </Button>
+                <Button asChild className="h-10 rounded-none" type="button" variant="outline">
+                  <Link href={`/perfil/pedidos/${checkoutContext.orderId}`}>Ver pedido</Link>
+                </Button>
+              </div>
+              {whatsAppOpenWarning ? (
+                <div className="mt-3 border border-amber-300 bg-amber-50 p-3">
+                  <p className="text-xs font-semibold text-amber-700">{whatsAppOpenWarning}</p>
+                  <Link
+                    className="mt-2 inline-block text-xs font-bold text-amber-700 underline"
+                    href={checkoutContext.whatsappUrl}
+                    target="_blank"
+                  >
+                    Abrir WhatsApp neste navegador
+                  </Link>
+                </div>
+              ) : null}
+              <button
+                className="mt-3 text-xs font-semibold text-muted-foreground underline"
+                onClick={clearCheckoutContext}
+                type="button"
+              >
+                Ocultar confirmação
+              </button>
+            </div>
+          ) : null}
+
           <div className="rounded-[1.75rem] border border-black/10 bg-[#fcfbf9] px-6 py-12 text-center">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-melier-rose">
               <ShoppingBag className="h-6 w-6" />
@@ -199,6 +326,44 @@ export function CartPage() {
   return (
     <section className="bg-white py-6 sm:py-8">
       <div className="container">
+        {checkoutContext ? (
+          <div className="mb-4 border border-emerald-300 bg-emerald-50 p-4">
+            <p className="text-xs font-extrabold uppercase tracking-[0.12em] text-emerald-700">
+              Pedido criado
+            </p>
+            <p className="mt-1 text-sm font-semibold text-emerald-800">
+              Número do pedido: {checkoutContext.orderNumber}
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-2">
+              <Button className="h-10 rounded-none" onClick={handleOpenWhatsAppAgain} type="button">
+                Abrir WhatsApp
+              </Button>
+              <Button asChild className="h-10 rounded-none" type="button" variant="outline">
+                <Link href={`/perfil/pedidos/${checkoutContext.orderId}`}>Ver pedido</Link>
+              </Button>
+            </div>
+            {whatsAppOpenWarning ? (
+              <div className="mt-3 border border-amber-300 bg-amber-50 p-3">
+                <p className="text-xs font-semibold text-amber-700">{whatsAppOpenWarning}</p>
+                <Link
+                  className="mt-2 inline-block text-xs font-bold text-amber-700 underline"
+                  href={checkoutContext.whatsappUrl}
+                  target="_blank"
+                >
+                  Abrir WhatsApp neste navegador
+                </Link>
+              </div>
+            ) : null}
+            <button
+              className="mt-3 text-xs font-semibold text-muted-foreground underline"
+              onClick={clearCheckoutContext}
+              type="button"
+            >
+              Ocultar confirmação
+            </button>
+          </div>
+        ) : null}
+
         <div className="mb-6">
           <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-melier-rose">
             Sacola

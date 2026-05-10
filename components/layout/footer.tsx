@@ -11,11 +11,14 @@ export function Footer() {
           </p>
         </div>
         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs font-extrabold uppercase tracking-[0.12em] text-white/80">
-          <Link className="hover:text-melier-blush" href="/produtos">
-            Trocas
+          <Link className="hover:text-melier-blush" href="/trocas-e-devolucoes">
+            Trocas e devoluções
           </Link>
-          <Link className="hover:text-melier-blush" href="/produtos">
-            Envio
+          <Link className="hover:text-melier-blush" href="/privacidade">
+            Privacidade
+          </Link>
+          <Link className="hover:text-melier-blush" href="/termos-de-uso">
+            Termos
           </Link>
           <Link className="hover:text-melier-blush" href="/#contato">
             Contato
