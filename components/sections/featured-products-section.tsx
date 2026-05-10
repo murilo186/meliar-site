@@ -106,7 +106,7 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
 
   return (
     <section className="bg-white py-8 sm:py-10">
-      <div className="container max-w-[1360px]">
+      <div className="container">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
             <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-melier-rose">
