@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronRight, ShoppingBag } from "lucide-react";
+import { Check, ChevronRight, Heart, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
+import { useFavorites } from "@/components/providers/favorites-provider";
 import { Button } from "@/components/ui/button";
 import { getDefaultVariant } from "@/lib/catalog/get-products";
 import { formatCurrency } from "@/lib/format";
@@ -24,7 +25,9 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const [didAddRecently, setDidAddRecently] = useState(false);
   const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [isAdmin, setIsAdmin] = useState(false);
+  const isFavorited = isFavorite(product.slug);
 
   useEffect(() => {
     const supabase = createSupabaseBrowserClientOrNull();
@@ -334,6 +337,17 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 >
                   <ShoppingBag className="h-4 w-4" />
                   {didAddRecently ? "Adicionado" : "Adicionar à sacola"}
+                </Button>
+                <Button
+                  className="h-11 w-full rounded-none border-melier-rose bg-white text-melier-rose hover:bg-melier-rose/5 hover:text-melier-rose"
+                  onClick={() => {
+                    void toggleFavorite(product.slug);
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <Heart className={`h-4 w-4 ${isFavorited ? "fill-current" : ""}`} />
+                  {isFavorited ? "Remover dos favoritos" : "Adicionar aos favoritos"}
                 </Button>
                 {isAdmin ? (
                   <Button asChild className="h-11 w-full rounded-none" type="button" variant="outline">
