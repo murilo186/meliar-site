@@ -1,7 +1,13 @@
 import { CatalogBreadcrumbs } from "@/components/catalog/catalog-breadcrumbs";
+import { CatalogDesktopFilters } from "@/components/catalog/catalog-desktop-filters";
 import { CatalogGrid } from "@/components/catalog/catalog-grid";
+import { CatalogMobileFilters } from "@/components/catalog/catalog-mobile-filters";
 import { CatalogSidebar } from "@/components/catalog/catalog-sidebar";
 import { CatalogToolbar } from "@/components/catalog/catalog-toolbar";
+import type {
+  CatalogFilterOption,
+  CatalogPriceBounds,
+} from "@/lib/catalog/catalog-filters";
 import type { ProductSort } from "@/lib/catalog/get-products";
 import type { BreadcrumbItem } from "@/types/catalog";
 import type { Product } from "@/types/product";
@@ -16,6 +22,13 @@ interface CatalogPageProps {
   keepQuery?: Record<string, string | undefined>;
   currentCategorySlug?: string;
   currentSubcategorySlug?: string;
+  selectedColors?: string[];
+  selectedSizes?: string[];
+  selectedPriceMin?: number;
+  selectedPriceMax?: number;
+  colorOptions?: CatalogFilterOption[];
+  sizeOptions?: CatalogFilterOption[];
+  priceBounds?: CatalogPriceBounds;
   variant?: "default" | "editorial";
 }
 
@@ -29,6 +42,13 @@ export function CatalogPage({
   keepQuery,
   currentCategorySlug,
   currentSubcategorySlug,
+  selectedColors = [],
+  selectedSizes = [],
+  selectedPriceMin,
+  selectedPriceMax,
+  colorOptions = [],
+  sizeOptions = [],
+  priceBounds = { min: 0, max: 0 },
   variant = "default",
 }: CatalogPageProps) {
   if (variant === "editorial") {
@@ -45,8 +65,42 @@ export function CatalogPage({
             title={title}
             variant="editorial"
           />
+          <div className="mt-4">
+            <CatalogMobileFilters
+              basePath={basePath}
+              colorOptions={colorOptions}
+              count={products.length}
+              keepQuery={keepQuery}
+              selectedColors={selectedColors}
+              selectedSizes={selectedSizes}
+              selectedPriceMin={selectedPriceMin}
+              selectedPriceMax={selectedPriceMax}
+              sizeOptions={sizeOptions}
+              priceBounds={priceBounds}
+              sort={sort}
+            />
+          </div>
+
+          <div className="mt-4">
+            <CatalogDesktopFilters
+              basePath={basePath}
+              colorOptions={colorOptions}
+              count={products.length}
+              keepQuery={keepQuery}
+              selectedColors={selectedColors}
+              selectedSizes={selectedSizes}
+              selectedPriceMin={selectedPriceMin}
+              selectedPriceMax={selectedPriceMax}
+              sizeOptions={sizeOptions}
+              priceBounds={priceBounds}
+              sort={sort}
+            />
+          </div>
+
           <div className="mt-6">
-            <CatalogGrid products={products} variant="editorial" />
+            <div className="min-w-0 flex-1">
+              <CatalogGrid products={products} variant="editorial" />
+            </div>
           </div>
         </div>
       </section>

@@ -1,5 +1,13 @@
 import { notFound } from "next/navigation";
 import { CatalogPage } from "@/components/catalog/catalog-page";
+import {
+  filterProductsByCatalogFilters,
+  getCatalogFilterOptions,
+  parseFilterParam,
+  parsePriceParam,
+  serializeFilterParam,
+  serializePriceParam,
+} from "@/lib/catalog/catalog-filters";
 import { getCategoryBySlug, getSubcategoryBySlugs } from "@/lib/catalog/get-categories";
 import { parseProductSort } from "@/lib/catalog/get-products";
 import { getProductsBySubcategoryFromDb } from "@/lib/catalog/get-products-db";
@@ -11,6 +19,10 @@ interface SubcategoryPageProps {
   }>;
   searchParams?: Promise<{
     sort?: string;
+    cores?: string;
+    tamanhos?: string;
+    precoMin?: string;
+    precoMax?: string;
   }>;
 }
 
@@ -28,11 +40,23 @@ export default async function SubcategoryPage({
 
   const query = await searchParams;
   const sort = parseProductSort(query?.sort);
-  const products = await getProductsBySubcategoryFromDb(
+  const selectedColors = parseFilterParam(query?.cores);
+  const selectedSizes = parseFilterParam(query?.tamanhos);
+  const selectedPriceMin = parsePriceParam(query?.precoMin);
+  const selectedPriceMax = parsePriceParam(query?.precoMax);
+  const productsInContext = await getProductsBySubcategoryFromDb(
     category.slug,
     subcategory.slug,
     sort,
   );
+  const products = filterProductsByCatalogFilters(productsInContext, {
+    colors: selectedColors,
+    sizes: selectedSizes,
+    priceMin: selectedPriceMin,
+    priceMax: selectedPriceMax,
+  });
+  const { colors: colorOptions, sizes: sizeOptions, priceBounds } =
+    getCatalogFilterOptions(productsInContext);
 
   return (
     <CatalogPage
@@ -42,10 +66,23 @@ export default async function SubcategoryPage({
         { label: category.name.toLowerCase(), href: category.href },
         { label: subcategory.name.toLowerCase() },
       ]}
+      colorOptions={colorOptions}
       currentCategorySlug={category.slug}
       currentSubcategorySlug={subcategory.slug}
       description={`Seleção de ${subcategory.name.toLowerCase()} dentro de ${category.name.toLowerCase()}.`}
+      keepQuery={{
+        cores: serializeFilterParam(selectedColors),
+        tamanhos: serializeFilterParam(selectedSizes),
+        precoMin: serializePriceParam(selectedPriceMin),
+        precoMax: serializePriceParam(selectedPriceMax),
+      }}
       products={products}
+      selectedColors={selectedColors}
+      selectedPriceMin={selectedPriceMin}
+      selectedPriceMax={selectedPriceMax}
+      selectedSizes={selectedSizes}
+      sizeOptions={sizeOptions}
+      priceBounds={priceBounds}
       sort={sort}
       title={subcategory.name}
       variant="editorial"

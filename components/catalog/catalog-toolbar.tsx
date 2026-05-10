@@ -49,7 +49,7 @@ export function CatalogToolbar({
   if (variant === "editorial") {
     return (
       <div className="border-b border-black/10 pb-5">
-        <div className="flex flex-wrap items-center gap-4 text-sm text-melier-ink">
+        <div className="hidden flex-wrap items-center gap-4 text-sm text-melier-ink lg:flex">
           <div className="relative group">
             <button
               className="flex items-center gap-2 text-sm font-medium text-melier-ink"
@@ -79,14 +79,6 @@ export function CatalogToolbar({
               </div>
             </div>
           </div>
-
-          <button
-            className="flex items-center gap-2 text-sm font-medium text-melier-ink"
-            type="button"
-          >
-            <span>Filtrar</span>
-            <ChevronDown className="h-4 w-4" />
-          </button>
 
           <div className="flex items-center gap-4">
             <p className="text-sm">
