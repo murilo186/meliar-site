@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Heart, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
 import { Button } from "@/components/ui/button";
+import { sanitizeSearchQuery } from "@/lib/catalog/catalog-search";
 import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import {
   Sheet,
@@ -42,6 +43,95 @@ const mobileProductItems = catalogCategories.map((category) => ({
 
 const logoHeader = "/images/logo/logo_header1.png";
 
+interface SearchSuggestion {
+  slug: string;
+  name: string;
+  category: string;
+  price: number;
+  image: string;
+  href: string;
+}
+
+type SearchSuggestionsResponse = {
+  query: string;
+  totalMatches: number;
+  suggestions: SearchSuggestion[];
+};
+
+function buildSearchResultsHref(query: string) {
+  const sanitized = sanitizeSearchQuery(query);
+  if (!sanitized) {
+    return "/produtos";
+  }
+
+  return `/produtos?q=${encodeURIComponent(sanitized)}`;
+}
+
+function formatSuggestionPrice(value: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(value);
+}
+
+function useCatalogSuggestions(query: string) {
+  const normalizedQuery = sanitizeSearchQuery(query);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [totalMatches, setTotalMatches] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!normalizedQuery) {
+      setSuggestions([]);
+      setTotalMatches(0);
+      setIsLoading(false);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsLoading(true);
+
+      try {
+        const response = await fetch(
+          `/api/catalog/search?q=${encodeURIComponent(normalizedQuery)}`,
+          { signal: controller.signal },
+        );
+
+        if (!response.ok) {
+          throw new Error("Não foi possível carregar sugestões.");
+        }
+
+        const payload = (await response.json()) as SearchSuggestionsResponse;
+        setSuggestions(payload.suggestions ?? []);
+        setTotalMatches(payload.totalMatches ?? 0);
+      } catch {
+        if (controller.signal.aborted) {
+          return;
+        }
+        setSuggestions([]);
+        setTotalMatches(0);
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+        }
+      }
+    }, 160);
+
+    return () => {
+      controller.abort();
+      window.clearTimeout(timeoutId);
+    };
+  }, [normalizedQuery]);
+
+  return {
+    normalizedQuery,
+    suggestions,
+    totalMatches,
+    isLoading,
+  };
+}
+
 export function Header() {
   const searchParams = useSearchParams();
   const currentQuery = searchParams?.get("q") ?? "";
@@ -53,7 +143,16 @@ export function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
+  const [desktopQuery, setDesktopQuery] = useState(currentQuery);
+  const [mobileQuery, setMobileQuery] = useState(currentQuery);
+  const [isDesktopSearchOpen, setIsDesktopSearchOpen] = useState(false);
   const profileMenuRef = useRef<HTMLDivElement | null>(null);
+  const desktopSearchRef = useRef<HTMLDivElement | null>(null);
+  const desktopSearch = useCatalogSuggestions(desktopQuery);
+  const mobileSearch = useCatalogSuggestions(mobileQuery);
+  const desktopAllResultsHref = buildSearchResultsHref(desktopQuery);
+  const mobileAllResultsHref = buildSearchResultsHref(mobileQuery);
+  const isMobileSearching = Boolean(mobileSearch.normalizedQuery);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -124,10 +223,21 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    setDesktopQuery(currentQuery);
+    setMobileQuery(currentQuery);
+  }, [currentQuery]);
+
+  useEffect(() => {
     function handleOutsideClick(event: MouseEvent) {
-      if (!profileMenuRef.current) return;
-      if (profileMenuRef.current.contains(event.target as Node)) return;
-      setIsProfileMenuOpen(false);
+      const target = event.target as Node;
+
+      if (profileMenuRef.current && !profileMenuRef.current.contains(target)) {
+        setIsProfileMenuOpen(false);
+      }
+
+      if (desktopSearchRef.current && !desktopSearchRef.current.contains(target)) {
+        setIsDesktopSearchOpen(false);
+      }
     }
 
     document.addEventListener("mousedown", handleOutsideClick);
@@ -189,146 +299,261 @@ export function Header() {
                   <input
                     aria-label="Buscar produtos"
                     className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                    defaultValue={currentQuery}
                     name="q"
+                    onChange={(event) => setMobileQuery(event.target.value)}
+                    value={mobileQuery}
                     placeholder="Buscar produtos"
                     type="search"
                   />
                 </form>
-                <nav className="grid gap-1">
-                  <SheetClose asChild>
-                    <Link
-                      className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
-                      href="/produtos"
-                    >
-                      Produtos
-                    </Link>
-                  </SheetClose>
 
-                  <div className="rounded-md border border-black/8">
-                    <button
-                      className="flex w-full items-center justify-between px-2 py-2 text-left text-sm font-bold text-melier-ink"
-                      onClick={() => setIsProductsOpen((open) => !open)}
-                      type="button"
-                    >
-                      <span>Produtos</span>
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform ${
-                          isProductsOpen ? "rotate-180" : ""
+                {isMobileSearching ? (
+                  <div className="mb-4 border-b border-black/10 pb-4">
+                    {mobileSearch.isLoading ? (
+                      <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        Buscando...
+                      </p>
+                    ) : mobileSearch.suggestions.length > 0 ? (
+                      <div className="grid gap-1">
+                        {mobileSearch.suggestions.map((suggestion) => (
+                          <SheetClose asChild key={suggestion.slug}>
+                            <Link
+                              className="grid grid-cols-[44px_1fr] items-center gap-2 rounded-md px-1 py-1.5 transition hover:bg-[#ffe4ec]"
+                              href={suggestion.href}
+                            >
+                              <img
+                                alt={suggestion.name}
+                                className="h-11 w-11 rounded-sm object-cover"
+                                src={suggestion.image}
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-melier-ink">
+                                  {suggestion.name}
+                                </p>
+                                <p className="truncate text-[11px] text-muted-foreground">
+                                  {suggestion.category}
+                                </p>
+                              </div>
+                            </Link>
+                          </SheetClose>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm font-semibold text-muted-foreground">
+                        Nenhum produto encontrado.
+                      </p>
+                    )}
+
+                    <SheetClose asChild>
+                      <Link
+                        className="mt-3 block text-sm font-extrabold uppercase tracking-[0.1em] text-melier-rose"
+                        href={mobileAllResultsHref}
+                      >
+                        Ver todos os resultados
+                        {mobileSearch.totalMatches > 0 ? ` (${mobileSearch.totalMatches})` : ""}
+                      </Link>
+                    </SheetClose>
+                  </div>
+                ) : null}
+
+                {!isMobileSearching ? (
+                  <nav className="grid gap-1">
+                    <SheetClose asChild>
+                      <Link
+                        className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
+                        href="/produtos"
+                      >
+                        Produtos
+                      </Link>
+                    </SheetClose>
+
+                    <div className="rounded-md border border-black/8">
+                      <button
+                        className="flex w-full items-center justify-between px-2 py-2 text-left text-sm font-bold text-melier-ink"
+                        onClick={() => setIsProductsOpen((open) => !open)}
+                        type="button"
+                      >
+                        <span>Produtos</span>
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${
+                            isProductsOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </button>
+
+                      <div
+                        className={`grid overflow-hidden transition-all duration-300 ${
+                          isProductsOpen ? "grid-rows-[1fr] pb-2" : "grid-rows-[0fr]"
                         }`}
-                      />
-                    </button>
+                      >
+                        <div className="min-h-0">
+                          {mobileProductItems.map((item) => {
+                            if (item.children?.length) {
+                              const isOpen = openGroup === item.label;
 
-                    <div
-                      className={`grid overflow-hidden transition-all duration-300 ${
-                        isProductsOpen ? "grid-rows-[1fr] pb-2" : "grid-rows-[0fr]"
-                      }`}
-                    >
-                      <div className="min-h-0">
-                        {mobileProductItems.map((item) => {
-                          if (item.children?.length) {
-                            const isOpen = openGroup === item.label;
-
-                            return (
-                              <div className="px-2" key={item.label}>
-                                <div className="flex items-center justify-between gap-2">
-                                  <SheetClose asChild>
-                                    <Link
-                                      className="block flex-1 px-2 py-2 text-sm font-medium text-melier-ink/80 hover:text-melier-rose"
-                                      href={item.href}
+                              return (
+                                <div className="px-2" key={item.label}>
+                                  <div className="flex items-center justify-between gap-2">
+                                    <SheetClose asChild>
+                                      <Link
+                                        className="block flex-1 px-2 py-2 text-sm font-medium text-melier-ink/80 hover:text-melier-rose"
+                                        href={item.href}
+                                      >
+                                        {item.label}
+                                      </Link>
+                                    </SheetClose>
+                                    <button
+                                      aria-label={`Abrir ${item.label}`}
+                                      className="p-2 text-melier-ink/80"
+                                      onClick={() =>
+                                        setOpenGroup((current) =>
+                                          current === item.label ? null : item.label,
+                                        )
+                                      }
+                                      type="button"
                                     >
-                                      {item.label}
-                                    </Link>
-                                  </SheetClose>
-                                  <button
-                                    aria-label={`Abrir ${item.label}`}
-                                    className="p-2 text-melier-ink/80"
-                                    onClick={() =>
-                                      setOpenGroup((current) =>
-                                        current === item.label ? null : item.label,
-                                      )
-                                    }
-                                    type="button"
-                                  >
-                                    <ChevronDown
-                                      className={`h-4 w-4 transition-transform ${
-                                        isOpen ? "rotate-180" : ""
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
+                                      <ChevronDown
+                                        className={`h-4 w-4 transition-transform ${
+                                          isOpen ? "rotate-180" : ""
+                                        }`}
+                                      />
+                                    </button>
+                                  </div>
 
-                                <div
-                                  className={`grid overflow-hidden transition-all duration-300 ${
-                                    isOpen ? "grid-rows-[1fr] pb-1" : "grid-rows-[0fr]"
-                                  }`}
-                                >
-                                  <div className="min-h-0">
-                                    {item.children.map((child) => (
-                                      <SheetClose asChild key={child.slug}>
-                                        <Link
-                                          className="block px-4 py-2 text-sm text-melier-ink/70 hover:text-melier-rose"
-                                          href={child.href}
-                                        >
-                                          {child.name}
-                                        </Link>
-                                      </SheetClose>
-                                    ))}
+                                  <div
+                                    className={`grid overflow-hidden transition-all duration-300 ${
+                                      isOpen ? "grid-rows-[1fr] pb-1" : "grid-rows-[0fr]"
+                                    }`}
+                                  >
+                                    <div className="min-h-0">
+                                      {item.children.map((child) => (
+                                        <SheetClose asChild key={child.slug}>
+                                          <Link
+                                            className="block px-4 py-2 text-sm text-melier-ink/70 hover:text-melier-rose"
+                                            href={child.href}
+                                          >
+                                            {child.name}
+                                          </Link>
+                                        </SheetClose>
+                                      ))}
+                                    </div>
                                   </div>
                                 </div>
-                              </div>
-                            );
-                          }
+                              );
+                            }
 
-                          return (
-                            <SheetClose asChild key={item.label}>
-                              <Link
-                                className="block px-4 py-2 text-sm font-medium text-melier-ink/80 hover:text-melier-rose"
-                                href={item.href}
-                              >
-                                {item.label}
-                              </Link>
-                            </SheetClose>
-                          );
-                        })}
+                            return (
+                              <SheetClose asChild key={item.label}>
+                                <Link
+                                  className="block px-4 py-2 text-sm font-medium text-melier-ink/80 hover:text-melier-rose"
+                                  href={item.href}
+                                >
+                                  {item.label}
+                                </Link>
+                              </SheetClose>
+                            );
+                          })}
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  <SheetClose asChild>
-                    <Link
-                      className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
-                      href="/#contato"
-                    >
-                      Contato
-                    </Link>
-                  </SheetClose>
-                </nav>
+                    <SheetClose asChild>
+                      <Link
+                        className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
+                        href="/#contato"
+                      >
+                        Contato
+                      </Link>
+                    </SheetClose>
+                  </nav>
+                ) : null}
               </SheetContent>
             </Sheet>
 
-            <form
-              action="/produtos"
-              className="hidden w-full max-w-[280px] items-center gap-2 border-b border-black/25 pb-2 lg:flex"
-              method="get"
-              role="search"
-            >
-              <button
-                aria-label="Buscar"
-                className="text-muted-foreground transition hover:text-melier-rose"
-                type="submit"
+            <div className="relative hidden w-full max-w-[280px] lg:block" ref={desktopSearchRef}>
+              <form
+                action="/produtos"
+                className="flex w-full items-center gap-2 border-b border-black/25 pb-2"
+                method="get"
+                role="search"
               >
-                <Search className="h-4 w-4" />
-              </button>
-              <input
-                aria-label="Buscar produtos"
-                className="w-full bg-transparent text-[11px] uppercase tracking-[0.2em] text-melier-ink outline-none placeholder:text-[#6f6f6f]"
-                defaultValue={currentQuery}
-                name="q"
-                placeholder="Buscar todo o site"
-                type="search"
-              />
-            </form>
+                <button
+                  aria-label="Buscar"
+                  className="text-muted-foreground transition hover:text-melier-rose"
+                  type="submit"
+                >
+                  <Search className="h-4 w-4" />
+                </button>
+                <input
+                  aria-label="Buscar produtos"
+                  className="w-full bg-transparent text-[11px] uppercase tracking-[0.2em] text-melier-ink outline-none placeholder:text-[#6f6f6f]"
+                    name="q"
+                    onChange={(event) => {
+                      setDesktopQuery(event.target.value);
+                      setIsDesktopSearchOpen(true);
+                    }}
+                    onFocus={() => setIsDesktopSearchOpen(true)}
+                    placeholder="Buscar todo o site"
+                    type="search"
+                    value={desktopQuery}
+                  />
+                </form>
+                {isDesktopSearchOpen && desktopSearch.normalizedQuery ? (
+                  <div className="absolute left-0 right-0 top-full z-[90] mt-2 border border-black/10 bg-white shadow-[0_14px_30px_rgba(17,17,17,0.12)]">
+                    <div className="max-h-[360px] overflow-y-auto p-2">
+                      {desktopSearch.isLoading ? (
+                        <p className="px-2 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                          Buscando...
+                        </p>
+                      ) : desktopSearch.suggestions.length > 0 ? (
+                        <div className="grid gap-1">
+                          {desktopSearch.suggestions.map((suggestion) => (
+                            <Link
+                              className="grid grid-cols-[52px_1fr] items-center gap-2 rounded-md px-1 py-1.5 transition hover:bg-[#ffe4ec]"
+                              href={suggestion.href}
+                              key={suggestion.slug}
+                              onClick={() => setIsDesktopSearchOpen(false)}
+                            >
+                              <img
+                                alt={suggestion.name}
+                                className="h-12 w-12 rounded-sm object-cover"
+                                src={suggestion.image}
+                              />
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-semibold text-melier-ink">
+                                  {suggestion.name}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="truncate text-[11px] text-muted-foreground">
+                                    {suggestion.category}
+                                  </p>
+                                  <span className="text-[11px] font-bold text-melier-ink">
+                                    {formatSuggestionPrice(suggestion.price)}
+                                  </span>
+                                </div>
+                              </div>
+                            </Link>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="px-2 py-2 text-sm font-semibold text-muted-foreground">
+                          Nenhum produto encontrado.
+                        </p>
+                      )}
+                    </div>
+                    <div className="border-t border-black/10 px-3 py-2">
+                      <Link
+                        className="text-xs font-extrabold uppercase tracking-[0.12em] text-melier-rose"
+                        href={desktopAllResultsHref}
+                        onClick={() => setIsDesktopSearchOpen(false)}
+                      >
+                        Ver todos os resultados
+                        {desktopSearch.totalMatches > 0 ? ` (${desktopSearch.totalMatches})` : ""}
+                      </Link>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
           </div>
 
           <Link
