@@ -107,7 +107,15 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
         ) : null}
 
         <Button asChild className="rounded-none" size="sm" variant="outline">
-          <Link href={buildOrderSupportWhatsAppUrl(order.orderNumber)} target="_blank">
+          <Link
+            href={buildOrderSupportWhatsAppUrl({
+              orderNumber: order.orderNumber,
+              source: "admin",
+              statusLabel: statusLabel[order.status],
+              intent: "Estamos entrando em contato sobre este pedido.",
+            })}
+            target="_blank"
+          >
             Entrar em contato com cliente
           </Link>
         </Button>

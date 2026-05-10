@@ -97,8 +97,16 @@ export default async function CustomerOrderPage({
 
         <div className="flex flex-wrap gap-2">
           <Button asChild className="rounded-none" size="sm">
-            <Link href={buildOrderSupportWhatsAppUrl(order.orderNumber)} target="_blank">
-              Falar no WhatsApp
+            <Link
+              href={buildOrderSupportWhatsAppUrl({
+                orderNumber: order.orderNumber,
+                source: "cliente",
+                statusLabel: statusLabel[order.status],
+                intent: "Quero atualizar o andamento deste pedido.",
+              })}
+              target="_blank"
+            >
+              Falar sobre este pedido no WhatsApp
             </Link>
           </Button>
           <Button asChild className="rounded-none" size="sm" variant="outline">

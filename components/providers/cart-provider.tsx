@@ -80,6 +80,28 @@ export function CartProvider({ children }: PropsWithChildren) {
     );
   };
 
+  const setItemQuantity = (selectionId: string, quantity: number) => {
+    const nextQuantity = Math.floor(quantity);
+
+    if (!Number.isFinite(nextQuantity)) {
+      return;
+    }
+
+    setItems((currentItems) =>
+      currentItems.flatMap((item) => {
+        if (item.selection.id !== selectionId) {
+          return item;
+        }
+
+        if (nextQuantity <= 0) {
+          return [];
+        }
+
+        return { ...item, quantity: nextQuantity };
+      }),
+    );
+  };
+
   const clearCart = () => {
     setItems([]);
   };
@@ -99,6 +121,7 @@ export function CartProvider({ children }: PropsWithChildren) {
       lastAddedAt,
       addItem,
       decreaseItem,
+      setItemQuantity,
       removeItem,
       clearCart,
     };

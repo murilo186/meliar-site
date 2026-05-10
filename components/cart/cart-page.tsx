@@ -12,6 +12,13 @@ import type { CartItem } from "@/types/cart";
 const CHECKOUT_CONTEXT_STORAGE_KEY = "meliar-last-checkout";
 
 interface CheckoutValidationIssue {
+  code:
+    | "invalid-item"
+    | "product-not-found"
+    | "variant-not-found"
+    | "out-of-stock"
+    | "insufficient-stock"
+    | "invalid-pricing";
   selectionId: string;
   productSlug: string;
   productName: string;
@@ -85,6 +92,7 @@ export function CartPage() {
     subtotal,
     addItem,
     decreaseItem,
+    setItemQuantity,
     removeItem,
     clearCart,
   } = useCart();
@@ -107,6 +115,10 @@ export function CartPage() {
     setCheckoutContext(null);
     persistCheckoutContext(null);
   }, []);
+
+  const issueBySelectionId = new Map(
+    (cartValidation?.issues ?? []).map((issue) => [issue.selectionId, issue] as const),
+  );
 
   const requestCartValidation = useCallback(async (snapshot: CartItem[]) => {
     if (snapshot.length === 0) {
@@ -185,6 +197,19 @@ export function CartPage() {
     setWhatsAppOpenWarning(
       "Não foi possível abrir automaticamente. Use o botão abaixo para abrir no mesmo navegador.",
     );
+  };
+
+  const handleFixUnavailableItem = (issue: CheckoutValidationIssue) => {
+    if (issue.code === "insufficient-stock") {
+      if (issue.availableQuantity > 0) {
+        setItemQuantity(issue.selectionId, issue.availableQuantity);
+      } else {
+        removeItem(issue.selectionId);
+      }
+      return;
+    }
+
+    removeItem(issue.selectionId);
   };
 
   const handleWhatsAppCheckout = async () => {
@@ -404,6 +429,7 @@ export function CartPage() {
           <div className="grid gap-3">
             {items.map((item) => {
               const lineSubtotal = item.selection.price * item.quantity;
+              const availabilityIssue = issueBySelectionId.get(item.selection.id);
 
               return (
                 <article
@@ -428,6 +454,26 @@ export function CartPage() {
                         <p className="mt-1 text-sm font-semibold text-muted-foreground">
                           Tamanho: {item.selection.size}
                         </p>
+                        {availabilityIssue ? (
+                          <div className="mt-2 border border-red-300 bg-red-50 p-2">
+                            <p className="text-xs font-semibold text-red-700">
+                              {availabilityIssue.message}
+                            </p>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <Button
+                                className="h-8 rounded-none px-3 text-xs"
+                                onClick={() => handleFixUnavailableItem(availabilityIssue)}
+                                type="button"
+                                variant="outline"
+                              >
+                                {availabilityIssue.code === "insufficient-stock" &&
+                                availabilityIssue.availableQuantity > 0
+                                  ? `Ajustar para ${availabilityIssue.availableQuantity}`
+                                  : "Remover item"}
+                              </Button>
+                            </div>
+                          </div>
+                        ) : null}
                       </div>
                       <button
                         aria-label={`Remover ${item.selection.name}`}
