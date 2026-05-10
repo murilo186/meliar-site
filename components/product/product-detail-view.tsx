@@ -62,12 +62,36 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
     [defaultVariant, product.variants, selectedVariantSlug],
   );
 
+  const stockByVariantSlug = product.stockByVariantSlug;
+  const hasStockSync = Boolean(
+    stockByVariantSlug && Object.keys(stockByVariantSlug).length > 0,
+  );
+
+  const isVariantOutOfStock = (variantSlug: string) => {
+    if (!hasStockSync) return false;
+    const stockBySize = stockByVariantSlug?.[variantSlug];
+    if (!stockBySize) return true;
+    return Object.values(stockBySize).every((quantity) => quantity <= 0);
+  };
+
+  const isSizeOutOfStock = (variantSlug: string, size: string) => {
+    if (!hasStockSync) return false;
+    const stockBySize = stockByVariantSlug?.[variantSlug];
+    if (!stockBySize) return true;
+    return (stockBySize[size] ?? 0) <= 0;
+  };
+
+  const selectedVariantOutOfStock = isVariantOutOfStock(selectedVariant.slug);
+
   const handleVariantChange = (variantSlug: string) => {
     const variant =
       product.variants.find((item) => item.slug === variantSlug) ?? defaultVariant;
 
     setSelectedVariantSlug(variant.slug);
     setActiveImage(variant.images[0]);
+    if (selectedSize && isSizeOutOfStock(variant.slug, selectedSize)) {
+      setSelectedSize("");
+    }
 
     requestAnimationFrame(() => {
       mobileGalleryRef.current?.scrollTo({ left: 0, behavior: "smooth" });
@@ -116,8 +140,16 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   };
 
   const handleAddToCart = () => {
+    if (selectedVariantOutOfStock) {
+      return;
+    }
+
     if (!selectedSize) {
       setShowSizeError(true);
+      return;
+    }
+
+    if (isSizeOutOfStock(selectedVariant.slug, selectedSize)) {
       return;
     }
 
@@ -267,12 +299,15 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {product.variants.map((variant) => {
                     const isActive = variant.slug === selectedVariant.slug;
+                    const isOutOfStock = isVariantOutOfStock(variant.slug);
 
                     return (
                       <button
                         className={cn(
                           "flex min-h-12 items-center justify-between border px-3 py-3 text-left transition",
-                          isActive
+                          isOutOfStock
+                            ? "border-black/10 bg-zinc-100/80"
+                            : isActive
                             ? "border-melier-ink bg-white"
                             : "border-black/20 bg-white hover:border-melier-ink",
                         )}
@@ -282,14 +317,29 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                       >
                         <span className="flex items-center gap-3">
                           <span
-                            className="h-4 w-4 rounded-full border border-black/10"
+                            className={cn(
+                              "h-4 w-4 rounded-full border border-black/10",
+                              isOutOfStock ? "opacity-45 grayscale" : "",
+                            )}
                             style={{ backgroundColor: variant.colorHex }}
                           />
-                          <span className="text-sm font-bold text-melier-ink">
+                          <span
+                            className={cn(
+                              "text-sm font-bold",
+                              isOutOfStock ? "text-zinc-400" : "text-melier-ink",
+                            )}
+                          >
                             {variant.color}
                           </span>
                         </span>
-                        {isActive ? <Check className="h-4 w-4 text-melier-rose" /> : null}
+                        {isActive ? (
+                          <Check
+                            className={cn(
+                              "h-4 w-4",
+                              isOutOfStock ? "text-zinc-400" : "text-melier-rose",
+                            )}
+                          />
+                        ) : null}
                       </button>
                     );
                   })}
@@ -301,25 +351,43 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                   Tamanho
                 </p>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                  {product.sizes.map((size) => (
-                    <button
-                      className={cn(
-                        "flex h-12 items-center justify-center border px-3 text-sm font-extrabold uppercase tracking-[0.08em] transition",
-                        selectedSize === size
-                          ? "border-melier-ink bg-melier-ink text-white"
-                          : "border-black/20 bg-white text-melier-ink hover:border-melier-ink",
-                      )}
-                      key={size}
-                      onClick={() => {
-                        setSelectedSize(size);
-                        setShowSizeError(false);
-                      }}
-                      type="button"
-                    >
-                      {size}
-                    </button>
-                  ))}
+                  {product.sizes.map((size) => {
+                    const isOutOfStock = isSizeOutOfStock(selectedVariant.slug, size);
+
+                    return (
+                      <button
+                        className={cn(
+                          "relative flex h-12 items-center justify-center overflow-hidden border px-3 text-sm font-extrabold uppercase tracking-[0.08em] transition",
+                          isOutOfStock
+                            ? "cursor-not-allowed border-black/10 bg-zinc-100 text-zinc-400"
+                            : selectedSize === size
+                            ? "border-melier-ink bg-melier-ink text-white"
+                            : "border-black/20 bg-white text-melier-ink hover:border-melier-ink",
+                        )}
+                        disabled={isOutOfStock}
+                        key={size}
+                        onClick={() => {
+                          setSelectedSize(size);
+                          setShowSizeError(false);
+                        }}
+                        type="button"
+                      >
+                        {size}
+                        {isOutOfStock ? (
+                          <span
+                            aria-hidden
+                            className="pointer-events-none absolute -left-2 top-1/2 h-px w-[calc(100%+1rem)] -translate-y-1/2 -rotate-[28deg] bg-zinc-500/80"
+                          />
+                        ) : null}
+                      </button>
+                    );
+                  })}
                 </div>
+                {selectedVariantOutOfStock ? (
+                  <p className="mt-2 text-xs font-bold text-muted-foreground">
+                    Esta cor está sem estoque no momento.
+                  </p>
+                ) : null}
                 {showSizeError ? (
                   <p className="mt-2 text-xs font-bold text-melier-rose">
                     Escolha um tamanho para adicionar na sacola.
@@ -332,11 +400,16 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                   className={`h-11 w-full rounded-none transition-transform duration-300 ${
                     didAddRecently ? "scale-[1.01]" : ""
                   }`}
+                  disabled={selectedVariantOutOfStock}
                   onClick={handleAddToCart}
                   type="button"
                 >
                   <ShoppingBag className="h-4 w-4" />
-                  {didAddRecently ? "Adicionado" : "Adicionar à sacola"}
+                  {selectedVariantOutOfStock
+                    ? "Sem estoque nesta cor"
+                    : didAddRecently
+                    ? "Adicionado"
+                    : "Adicionar à sacola"}
                 </Button>
                 <Button
                   className="h-11 w-full rounded-none border-melier-rose bg-white text-melier-rose hover:bg-melier-rose/5 hover:text-melier-rose"

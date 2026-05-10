@@ -28,6 +28,8 @@ type DbVariantRow = {
   product_id: string;
   color_id: string;
   size_id: string;
+  stock_quantity: number;
+  is_available: boolean;
 };
 
 type DbColorRow = {
@@ -82,9 +84,8 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
     await Promise.all([
       supabase
         .from("product_variants")
-        .select("product_id,color_id,size_id")
-        .in("product_id", productIds)
-        .eq("is_available", true),
+        .select("product_id,color_id,size_id,stock_quantity,is_available")
+        .in("product_id", productIds),
       supabase.from("colors").select("id,name,slug,hex_code"),
       supabase.from("sizes").select("id,name"),
     ]);
@@ -140,11 +141,20 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
 
     const productVariants = variantsByProduct.get(productRow.id) ?? [];
     const imagesForProduct = imagesByProduct.get(productRow.id) ?? [];
+    const stockByVariantSlug: Record<string, Record<string, number>> = {};
 
     const variantGroups = new Map<string, ProductVariant>();
     for (const variantRow of productVariants) {
       const color = colorsMap.get(variantRow.color_id);
+      const sizeName = sizesMap.get(variantRow.size_id)?.name;
       if (!color) continue;
+
+      if (sizeName) {
+        const variantStock = stockByVariantSlug[color.slug] ?? {};
+        variantStock[sizeName] = variantRow.is_available ? variantRow.stock_quantity : 0;
+        stockByVariantSlug[color.slug] = variantStock;
+      }
+
       if (!variantGroups.has(color.id)) {
         const variantImages = imagesForProduct
           .filter((img) => img.color_id === color.id || img.color_id === null)
@@ -172,6 +182,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
 
     const variantsList = Array.from(variantGroups.values());
     if (variantsList.length === 0) continue;
+    const hasStockByVariant = Object.keys(stockByVariantSlug).length > 0;
     const isNewArrival = matchesNewArrivalRule({
       isHot: productRow.is_hot,
       showInNewArrivalsManual: productRow.show_in_new_arrivals_manual,
@@ -194,6 +205,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       sizes: sizesList.length > 0 ? sizesList : ["P", "M", "G"],
       defaultVariantSlug: variantsList[0].slug,
       variants: variantsList,
+      ...(hasStockByVariant ? { stockByVariantSlug } : {}),
       ...(subcategoryName ? { subcategory: subcategoryName } : {}),
       ...(subcategorySlug ? { subcategorySlug } : {}),
     });

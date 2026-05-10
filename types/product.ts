@@ -5,6 +5,8 @@ export interface ProductVariant {
   images: string[];
 }
 
+export type ProductStockByVariantSlug = Record<string, Record<string, number>>;
+
 export interface Product {
   id: number;
   slug: string;
@@ -24,4 +26,5 @@ export interface Product {
   sizes: string[];
   defaultVariantSlug?: string;
   variants: ProductVariant[];
+  stockByVariantSlug?: ProductStockByVariantSlug;
 }
