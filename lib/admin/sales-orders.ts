@@ -161,29 +161,33 @@ export async function getAdminSalesSummariesPageFromDb({
   const safePageSize = Math.min(Math.max(Math.floor(pageSize), 1), 30);
   const search = sanitizeSearchInput(query);
 
-  let rowsQuery: any = supabase
-    .from("orders")
-    .select("id,status,channel,customer_name,customer_phone,created_at,total_cents", {
-      count: "exact",
-    })
-    .order("created_at", { ascending: false });
+  const buildRowsQuery = ({ withCount }: { withCount: boolean }) => {
+    let queryBuilder = supabase
+      .from("orders")
+      .select("id,status,channel,customer_name,customer_phone,created_at,total_cents", {
+        ...(withCount ? { count: "exact" as const } : {}),
+      })
+      .order("created_at", { ascending: false });
 
-  if (status !== "all") {
-    rowsQuery = rowsQuery.eq("status", status);
-  }
+    if (status !== "all") {
+      queryBuilder = queryBuilder.eq("status", status);
+    }
 
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    rowsQuery = rowsQuery.or(
-      `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
-    );
-  }
+    if (search) {
+      const pattern = `%${escapeIlikePattern(search)}%`;
+      queryBuilder = queryBuilder.or(
+        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
+      );
+    }
+
+    return queryBuilder;
+  };
 
   const from = (currentPage - 1) * safePageSize;
   const to = from + safePageSize - 1;
 
   const [{ data, error, count }, counters] = await Promise.all([
-    rowsQuery.range(from, to),
+    buildRowsQuery({ withCount: true }).range(from, to),
     getOrdersCounters(),
   ]);
 
@@ -204,23 +208,9 @@ export async function getAdminSalesSummariesPageFromDb({
   if (safePage !== currentPage && total > 0) {
     const safeFrom = (safePage - 1) * safePageSize;
     const safeTo = safeFrom + safePageSize - 1;
-    let safePageQuery: any = supabase
-      .from("orders")
-      .select("id,status,channel,customer_name,customer_phone,created_at,total_cents")
-      .order("created_at", { ascending: false });
-
-    if (status !== "all") {
-      safePageQuery = safePageQuery.eq("status", status);
-    }
-
-    if (search) {
-      const pattern = `%${escapeIlikePattern(search)}%`;
-      safePageQuery = safePageQuery.or(
-        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
-      );
-    }
-
-    const { data: safeData, error: safeError } = await safePageQuery.range(safeFrom, safeTo);
+    const { data: safeData, error: safeError } = await buildRowsQuery({
+      withCount: false,
+    }).range(safeFrom, safeTo);
 
     if (safeError) {
       throw safeError;

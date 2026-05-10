@@ -116,39 +116,57 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
     if (sizeFilter) orFilters.push(sizeFilter);
   }
 
-  const applyVariantFilters = (builder: any) => {
-    let scoped: any = builder;
-
-    if (onlyZero) {
-      scoped = scoped.eq("stock_quantity", 0);
-    }
-
-    if (onlyLow) {
-      scoped = scoped.gt("stock_quantity", 0).lte("stock_quantity", 3);
-    }
-
-    if (onlyInactive) {
-      scoped = scoped.eq("is_available", false);
-    }
-
-    if (orFilters.length > 0) {
-      scoped = scoped.or(orFilters.join(","));
-    }
-
-    return scoped;
-  };
-
-  const listQuery = applyVariantFilters(
-    supabase
+  const buildVariantListQuery = () => {
+    let query = supabase
       .from("product_variants")
       .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
       .order("stock_quantity", { ascending: true })
-      .order("sku", { ascending: true }),
-  );
+      .order("sku", { ascending: true });
+
+    if (onlyZero) {
+      query = query.eq("stock_quantity", 0);
+    }
+
+    if (onlyLow) {
+      query = query.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    }
+
+    if (onlyInactive) {
+      query = query.eq("is_available", false);
+    }
+
+    if (orFilters.length > 0) {
+      query = query.or(orFilters.join(","));
+    }
+
+    return query;
+  };
+
+  const buildVariantCountQuery = () => {
+    let query = supabase.from("product_variants").select("id", { count: "exact", head: true });
+
+    if (onlyZero) {
+      query = query.eq("stock_quantity", 0);
+    }
+
+    if (onlyLow) {
+      query = query.gt("stock_quantity", 0).lte("stock_quantity", 3);
+    }
+
+    if (onlyInactive) {
+      query = query.eq("is_available", false);
+    }
+
+    if (orFilters.length > 0) {
+      query = query.or(orFilters.join(","));
+    }
+
+    return query;
+  };
 
   const [{ data, error }, { count: movementsCount }, { data: rpcCountersData, error: rpcCountersError }] =
     await Promise.all([
-      listQuery.range((page - 1) * pageSize, page * pageSize - 1),
+      buildVariantListQuery().range((page - 1) * pageSize, page * pageSize - 1),
       supabase.from("inventory_movements").select("id", { count: "exact", head: true }),
       supabase.rpc("admin_stock_counters", {
         p_search: searchQuery || null,
@@ -173,17 +191,9 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
     lowCount = toCounterNumber(countersRow.low_count);
   } else {
     const [totalResult, zeroResult, lowResult] = await Promise.all([
-      applyVariantFilters(supabase.from("product_variants").select("id", { count: "exact", head: true })),
-      applyVariantFilters(
-        supabase.from("product_variants").select("id", { count: "exact", head: true }).eq("stock_quantity", 0),
-      ),
-      applyVariantFilters(
-        supabase
-          .from("product_variants")
-          .select("id", { count: "exact", head: true })
-          .gt("stock_quantity", 0)
-          .lte("stock_quantity", 3),
-      ),
+      buildVariantCountQuery(),
+      buildVariantCountQuery().eq("stock_quantity", 0),
+      buildVariantCountQuery().gt("stock_quantity", 0).lte("stock_quantity", 3),
     ]);
 
     if (totalResult.error) throw totalResult.error;
@@ -201,15 +211,7 @@ export default async function AdminStockPage({ searchParams }: AdminStockPagePro
   let rows = (data ?? []) as AdminStockRow[];
 
   if (safePage !== page && totalItems > 0) {
-    const refetchQuery = applyVariantFilters(
-      supabase
-        .from("product_variants")
-        .select("id,product_id,sku,stock_quantity,is_available,products(name),colors(name),sizes(name)")
-        .order("stock_quantity", { ascending: true })
-        .order("sku", { ascending: true }),
-    );
-
-    const { data: safeData, error: safeError } = await refetchQuery.range(
+    const { data: safeData, error: safeError } = await buildVariantListQuery().range(
       (safePage - 1) * pageSize,
       safePage * pageSize - 1,
     );
