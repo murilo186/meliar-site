@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createWhatsAppOrder } from "@/lib/orders/create-whatsapp-order";
+import { CheckoutValidationError } from "@/lib/orders/checkout-validation";
 import type { CartItem } from "@/types/cart";
 
 interface CheckoutPayload {
@@ -25,6 +26,16 @@ export async function POST(request: Request) {
     const checkout = await createWhatsAppOrder(items);
     return NextResponse.json(checkout, { status: 200 });
   } catch (error) {
+    if (error instanceof CheckoutValidationError) {
+      return NextResponse.json(
+        {
+          message: error.message,
+          issues: error.issues,
+        },
+        { status: error.status },
+      );
+    }
+
     const message =
       error instanceof Error ? error.message : "Não foi possível iniciar o pedido.";
     return NextResponse.json({ message }, { status: 500 });

@@ -1,12 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
 import { useAuthAction } from "@/components/providers/auth-action-provider";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
+import type { CartItem } from "@/types/cart";
+
+interface CheckoutValidationIssue {
+  selectionId: string;
+  productSlug: string;
+  productName: string;
+  color: string;
+  size: string;
+  requestedQuantity: number;
+  availableQuantity: number;
+  message: string;
+}
+
+interface CheckoutValidationResponse {
+  hasBlockingIssues: boolean;
+  hasPriceChanges: boolean;
+  subtotal: number;
+  total: number;
+  issues: CheckoutValidationIssue[];
+}
 
 export function CartPage() {
   const {
@@ -21,14 +41,93 @@ export function CartPage() {
   const { requireAuth } = useAuthAction();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isValidatingCart, setIsValidatingCart] = useState(false);
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [cartValidation, setCartValidation] = useState<CheckoutValidationResponse | null>(
+    null,
+  );
+
+  const requestCartValidation = useCallback(async (snapshot: CartItem[]) => {
+    if (snapshot.length === 0) {
+      setCartValidation(null);
+      return null;
+    }
+
+    setIsValidatingCart(true);
+
+    try {
+      const response = await fetch("/api/checkout/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ items: snapshot }),
+      });
+
+      const payload = (await response.json()) as
+        | CheckoutValidationResponse
+        | { message?: string };
+
+      if (!response.ok || !("hasBlockingIssues" in payload)) {
+        throw new Error(
+          "message" in payload && payload.message
+            ? payload.message
+            : "Não foi possível validar a sacola.",
+        );
+      }
+
+      setCartValidation(payload);
+      if (payload.hasBlockingIssues) {
+        setCheckoutError(
+          "Alguns itens da sacola ficaram indisponíveis. Revise antes de finalizar.",
+        );
+      } else {
+        setCheckoutError(null);
+      }
+
+      return payload;
+    } catch (error) {
+      setCartValidation(null);
+      setCheckoutError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível validar a sacola.",
+      );
+      return null;
+    } finally {
+      setIsValidatingCart(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (items.length === 0) {
+      setCartValidation(null);
+      setCheckoutError(null);
+      setIsValidatingCart(false);
+      return;
+    }
+
+    void requestCartValidation(items);
+  }, [items, requestCartValidation]);
 
   const handleWhatsAppCheckout = async () => {
     if (!requireAuth("finalizar seu pedido no WhatsApp")) {
       return;
     }
 
-    if (items.length === 0 || isSubmitting) {
+    if (items.length === 0 || isSubmitting || isValidatingCart) {
+      return;
+    }
+
+    const latestValidation = await requestCartValidation(items);
+    if (!latestValidation) {
+      return;
+    }
+
+    if (latestValidation.hasBlockingIssues) {
+      setCheckoutError(
+        "Existem itens indisponíveis na sacola. Ajuste antes de finalizar.",
+      );
       return;
     }
 
@@ -57,6 +156,7 @@ export function CartPage() {
       }
 
       clearCart();
+      setCartValidation(null);
       const popup = window.open(payload.whatsappUrl, "_blank", "noopener,noreferrer");
 
       if (!popup) {
@@ -109,6 +209,30 @@ export function CartPage() {
           <p className="mt-2 text-sm font-semibold text-muted-foreground">
             {itemCount} {itemCount === 1 ? "item" : "itens"} prontos para seguir ao atendimento.
           </p>
+          {isValidatingCart ? (
+            <p className="mt-2 text-xs font-semibold text-muted-foreground">
+              Validando disponibilidade da sacola...
+            </p>
+          ) : null}
+          {cartValidation?.hasPriceChanges ? (
+            <p className="mt-2 text-xs font-semibold text-amber-700">
+              Alguns preços foram atualizados. O total final será recalculado no checkout.
+            </p>
+          ) : null}
+          {cartValidation?.hasBlockingIssues ? (
+            <div className="mt-3 border border-red-300 bg-red-50 p-3">
+              <p className="text-xs font-bold text-red-700">
+                Existem itens indisponíveis na sacola:
+              </p>
+              <ul className="mt-1 space-y-1">
+                {cartValidation.issues.map((issue, index) => (
+                  <li className="text-xs font-semibold text-red-700" key={`${issue.selectionId}:${index}`}>
+                    • {issue.message}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -220,11 +344,21 @@ export function CartPage() {
             <div className="mt-5 grid gap-2">
               <Button
                 className="h-11 rounded-none"
-                disabled={isSubmitting}
+                disabled={
+                  isSubmitting ||
+                  isValidatingCart ||
+                  Boolean(cartValidation?.hasBlockingIssues)
+                }
                 onClick={handleWhatsAppCheckout}
                 type="button"
               >
-                {isSubmitting ? "Enviando pedido..." : "Finalizar no WhatsApp"}
+                {isSubmitting
+                  ? "Enviando pedido..."
+                  : isValidatingCart
+                  ? "Validando sacola..."
+                  : cartValidation?.hasBlockingIssues
+                  ? "Revise os itens indisponíveis"
+                  : "Finalizar no WhatsApp"}
               </Button>
               <Button
                 className="h-11 rounded-none"
