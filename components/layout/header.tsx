@@ -337,7 +337,7 @@ export function Header() {
                   onClick={() => setIsProfileMenuOpen((current) => !current)}
                   type="button"
                 >
-                  <span className="hidden text-[10px] font-medium uppercase tracking-[0.14em] text-black sm:block">
+                  <span className="block text-[9px] font-medium uppercase tracking-[0.14em] text-black sm:text-[10px]">
                     Bem-vindo
                   </span>
                   <span className="w-full truncate text-sm font-semibold text-melier-rose">{firstName}</span>
