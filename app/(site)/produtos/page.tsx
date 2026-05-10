@@ -10,6 +10,10 @@ import {
 import { parseProductSort } from "@/lib/catalog/get-products";
 import { getProductsFromDb } from "@/lib/catalog/get-products-db";
 import { hasNewLabel } from "@/lib/catalog/new-arrivals-rule";
+import {
+  filterProductsBySearchQuery,
+  sanitizeSearchQuery,
+} from "@/lib/catalog/catalog-search";
 
 interface ProductsPageProps {
   searchParams?: Promise<{
@@ -19,6 +23,7 @@ interface ProductsPageProps {
     tamanhos?: string;
     precoMin?: string;
     precoMax?: string;
+    q?: string;
   }>;
 }
 
@@ -30,15 +35,17 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
   const selectedSizes = parseFilterParam(params?.tamanhos);
   const selectedPriceMin = parsePriceParam(params?.precoMin);
   const selectedPriceMax = parsePriceParam(params?.precoMax);
+  const searchQuery = sanitizeSearchQuery(params?.q);
   const products = await getProductsFromDb(sort);
   const productsWithNewFirst = [...products].sort((left, right) => {
     const leftIsNew = hasNewLabel(left.label) ? 1 : 0;
     const rightIsNew = hasNewLabel(right.label) ? 1 : 0;
     return rightIsNew - leftIsNew;
   });
-  const productsInContext = showOnlyNew
+  const productsByNewRule = showOnlyNew
     ? productsWithNewFirst.filter((product) => hasNewLabel(product.label))
     : productsWithNewFirst;
+  const productsInContext = filterProductsBySearchQuery(productsByNewRule, searchQuery);
   const visibleProducts = filterProductsByCatalogFilters(productsInContext, {
     colors: selectedColors,
     sizes: selectedSizes,
@@ -56,13 +63,16 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
         { label: "produtos" },
       ]}
       description={
-        showOnlyNew
+        searchQuery
+          ? `Resultados para "${searchQuery}".`
+          : showOnlyNew
           ? "Mostrando peças marcadas como Novo na coleção atual da Meliar."
           : "Veja todas as peças disponíveis da coleção atual da Meliar."
       }
       colorOptions={colorOptions}
       keepQuery={{
         novos: showOnlyNew ? "1" : undefined,
+        q: searchQuery || undefined,
         cores: serializeFilterParam(selectedColors),
         tamanhos: serializeFilterParam(selectedSizes),
         precoMin: serializePriceParam(selectedPriceMin),

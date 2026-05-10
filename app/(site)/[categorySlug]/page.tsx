@@ -8,6 +8,10 @@ import {
   serializeFilterParam,
   serializePriceParam,
 } from "@/lib/catalog/catalog-filters";
+import {
+  filterProductsBySearchQuery,
+  sanitizeSearchQuery,
+} from "@/lib/catalog/catalog-search";
 import { getCategoryBySlug } from "@/lib/catalog/get-categories";
 import { parseProductSort } from "@/lib/catalog/get-products";
 import { getProductsByCategoryFromDb } from "@/lib/catalog/get-products-db";
@@ -22,6 +26,7 @@ interface CategoryPageProps {
     tamanhos?: string;
     precoMin?: string;
     precoMax?: string;
+    q?: string;
   }>;
 }
 
@@ -42,7 +47,9 @@ export default async function CategoryPage({
   const selectedSizes = parseFilterParam(query?.tamanhos);
   const selectedPriceMin = parsePriceParam(query?.precoMin);
   const selectedPriceMax = parsePriceParam(query?.precoMax);
-  const productsInContext = await getProductsByCategoryFromDb(category.slug, sort);
+  const searchQuery = sanitizeSearchQuery(query?.q);
+  const productsByCategory = await getProductsByCategoryFromDb(category.slug, sort);
+  const productsInContext = filterProductsBySearchQuery(productsByCategory, searchQuery);
   const products = filterProductsByCatalogFilters(productsInContext, {
     colors: selectedColors,
     sizes: selectedSizes,
@@ -61,8 +68,13 @@ export default async function CategoryPage({
       ]}
       colorOptions={colorOptions}
       currentCategorySlug={category.slug}
-      description={`Explore as peças de ${category.name.toLowerCase()} da Meliar.`}
+      description={
+        searchQuery
+          ? `Resultados para "${searchQuery}" em ${category.name.toLowerCase()}.`
+          : `Explore as peças de ${category.name.toLowerCase()} da Meliar.`
+      }
       keepQuery={{
+        q: searchQuery || undefined,
         cores: serializeFilterParam(selectedColors),
         tamanhos: serializeFilterParam(selectedSizes),
         precoMin: serializePriceParam(selectedPriceMin),

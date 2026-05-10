@@ -8,6 +8,10 @@ import {
   serializeFilterParam,
   serializePriceParam,
 } from "@/lib/catalog/catalog-filters";
+import {
+  filterProductsBySearchQuery,
+  sanitizeSearchQuery,
+} from "@/lib/catalog/catalog-search";
 import { getCategoryBySlug, getSubcategoryBySlugs } from "@/lib/catalog/get-categories";
 import { parseProductSort } from "@/lib/catalog/get-products";
 import { getProductsBySubcategoryFromDb } from "@/lib/catalog/get-products-db";
@@ -23,6 +27,7 @@ interface SubcategoryPageProps {
     tamanhos?: string;
     precoMin?: string;
     precoMax?: string;
+    q?: string;
   }>;
 }
 
@@ -44,10 +49,15 @@ export default async function SubcategoryPage({
   const selectedSizes = parseFilterParam(query?.tamanhos);
   const selectedPriceMin = parsePriceParam(query?.precoMin);
   const selectedPriceMax = parsePriceParam(query?.precoMax);
-  const productsInContext = await getProductsBySubcategoryFromDb(
+  const searchQuery = sanitizeSearchQuery(query?.q);
+  const productsBySubcategory = await getProductsBySubcategoryFromDb(
     category.slug,
     subcategory.slug,
     sort,
+  );
+  const productsInContext = filterProductsBySearchQuery(
+    productsBySubcategory,
+    searchQuery,
   );
   const products = filterProductsByCatalogFilters(productsInContext, {
     colors: selectedColors,
@@ -69,8 +79,13 @@ export default async function SubcategoryPage({
       colorOptions={colorOptions}
       currentCategorySlug={category.slug}
       currentSubcategorySlug={subcategory.slug}
-      description={`Seleção de ${subcategory.name.toLowerCase()} dentro de ${category.name.toLowerCase()}.`}
+      description={
+        searchQuery
+          ? `Resultados para "${searchQuery}" em ${subcategory.name.toLowerCase()}.`
+          : `Seleção de ${subcategory.name.toLowerCase()} dentro de ${category.name.toLowerCase()}.`
+      }
       keepQuery={{
+        q: searchQuery || undefined,
         cores: serializeFilterParam(selectedColors),
         tamanhos: serializeFilterParam(selectedSizes),
         precoMin: serializePriceParam(selectedPriceMin),

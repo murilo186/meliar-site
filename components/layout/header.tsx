@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Heart, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
@@ -42,6 +43,8 @@ const mobileProductItems = catalogCategories.map((category) => ({
 const logoHeader = "/images/logo/logo_header1.png";
 
 export function Header() {
+  const searchParams = useSearchParams();
+  const currentQuery = searchParams?.get("q") ?? "";
   const [isCompact, setIsCompact] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
@@ -171,15 +174,23 @@ export function Header() {
                   <SheetTitle>Menu</SheetTitle>
                 </SheetHeader>
                 <form
-                  action="#"
+                  action="/produtos"
                   className="mb-5 flex items-center gap-2 border-b border-border pb-4"
+                  method="get"
                   role="search"
                 >
-                  <Search className="h-4 w-4 text-muted-foreground" />
+                  <button
+                    aria-label="Buscar"
+                    className="text-muted-foreground transition hover:text-melier-rose"
+                    type="submit"
+                  >
+                    <Search className="h-4 w-4" />
+                  </button>
                   <input
                     aria-label="Buscar produtos"
                     className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                    name="search"
+                    defaultValue={currentQuery}
+                    name="q"
                     placeholder="Buscar produtos"
                     type="search"
                   />
@@ -293,22 +304,27 @@ export function Header() {
                     </Link>
                   </SheetClose>
                 </nav>
-                <div className="mt-5 border-t pt-4 text-sm text-muted-foreground">
-                  Busca preparada para conectar aos produtos na próxima etapa.
-                </div>
               </SheetContent>
             </Sheet>
 
             <form
-              action="#"
+              action="/produtos"
               className="hidden w-full max-w-[280px] items-center gap-2 border-b border-black/25 pb-2 lg:flex"
+              method="get"
               role="search"
             >
-              <Search className="h-4 w-4 text-muted-foreground" />
+              <button
+                aria-label="Buscar"
+                className="text-muted-foreground transition hover:text-melier-rose"
+                type="submit"
+              >
+                <Search className="h-4 w-4" />
+              </button>
               <input
                 aria-label="Buscar produtos"
                 className="w-full bg-transparent text-[11px] uppercase tracking-[0.2em] text-melier-ink outline-none placeholder:text-[#6f6f6f]"
-                name="search"
+                defaultValue={currentQuery}
+                name="q"
                 placeholder="Buscar todo o site"
                 type="search"
               />
