@@ -13,6 +13,7 @@ interface CatalogPageProps {
   breadcrumbs: BreadcrumbItem[];
   sort: ProductSort;
   basePath: string;
+  keepQuery?: Record<string, string | undefined>;
   currentCategorySlug?: string;
   currentSubcategorySlug?: string;
   variant?: "default" | "editorial";
@@ -25,6 +26,7 @@ export function CatalogPage({
   breadcrumbs,
   sort,
   basePath,
+  keepQuery,
   currentCategorySlug,
   currentSubcategorySlug,
   variant = "default",
@@ -38,6 +40,7 @@ export function CatalogPage({
             basePath={basePath}
             count={products.length}
             description={description}
+            keepQuery={keepQuery}
             sort={sort}
             title={title}
             variant="editorial"
@@ -66,6 +69,7 @@ export function CatalogPage({
               basePath={basePath}
               count={products.length}
               description={description}
+              keepQuery={keepQuery}
               sort={sort}
               title={title}
             />

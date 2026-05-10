@@ -16,6 +16,7 @@ interface CatalogToolbarProps {
   count: number;
   sort: ProductSort;
   basePath: string;
+  keepQuery?: Record<string, string | undefined>;
   variant?: "default" | "editorial";
 }
 
@@ -25,8 +26,26 @@ export function CatalogToolbar({
   count,
   sort,
   basePath,
+  keepQuery,
   variant = "default",
 }: CatalogToolbarProps) {
+  const buildSortHref = (nextSort: ProductSort) => {
+    const query = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(keepQuery ?? {})) {
+      if (value) {
+        query.set(key, value);
+      }
+    }
+
+    if (nextSort !== "featured") {
+      query.set("sort", nextSort);
+    }
+
+    const qs = query.toString();
+    return qs ? `${basePath}?${qs}` : basePath;
+  };
+
   if (variant === "editorial") {
     return (
       <div className="border-b border-black/10 pb-5">
@@ -50,9 +69,7 @@ export function CatalogToolbar({
                           ? "font-semibold text-melier-ink"
                           : "text-muted-foreground hover:text-melier-rose"
                       }`}
-                      href={
-                        option.value === "featured" ? basePath : `${basePath}?sort=${option.value}`
-                      }
+                      href={buildSortHref(option.value)}
                       key={option.value}
                     >
                       {option.label}
@@ -117,7 +134,7 @@ export function CatalogToolbar({
                     ? "border-melier-ink bg-melier-ink text-white"
                     : "border-black/10 bg-white text-melier-ink hover:border-melier-rose hover:text-melier-rose"
                 }`}
-                href={option.value === "featured" ? basePath : `${basePath}?sort=${option.value}`}
+                href={buildSortHref(option.value)}
                 key={option.value}
               >
                 {option.label}

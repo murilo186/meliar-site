@@ -3,6 +3,7 @@ import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { formatCurrency } from "@/lib/format";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { ProductActionsMenu } from "@/components/admin/product-actions-menu";
+import { matchesNewArrivalRule } from "@/lib/catalog/new-arrivals-rule";
 import {
   getAdminCategories,
   getAdminColors,
@@ -277,11 +278,25 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
       </form>
 
       <div className="space-y-3">
-        {products.map((product) => (
+        {products.map((product) => {
+          const hasNewLabel = matchesNewArrivalRule({
+            isHot: product.isHot,
+            showInNewArrivalsManual: product.showInNewArrivalsManual,
+            createdAt: product.createdAt,
+          });
+
+          return (
           <article key={product.id} className="border border-black/10 bg-white p-4">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <h3 className="text-base font-bold">{product.name}</h3>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h3 className="text-base font-bold">{product.name}</h3>
+                  {hasNewLabel ? (
+                    <span className="rounded-full bg-[#ffe4ec] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
+                      Novo
+                    </span>
+                  ) : null}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   {categoriesById.get(product.categoryId) ??
                     product.categoryName}{" "}
@@ -356,7 +371,8 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
               </form>
             </div>
           </article>
-        ))}
+          );
+        })}
       </div>
     </section>
   );

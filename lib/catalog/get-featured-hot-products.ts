@@ -1,5 +1,6 @@
 import { getProducts } from "@/lib/catalog/get-products";
 import { getProductsFromDb } from "@/lib/catalog/get-products-db";
+import { hasNewLabel } from "@/lib/catalog/new-arrivals-rule";
 import type { Product } from "@/types/product";
 
 function isHotProduct(product: Product) {
@@ -7,7 +8,7 @@ function isHotProduct(product: Product) {
     return true;
   }
 
-  return product.label?.trim().toLowerCase() === "novo";
+  return hasNewLabel(product.label);
 }
 
 export async function getFeaturedHotProducts(limit = 8) {

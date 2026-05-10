@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getProducts, type ProductSort } from "@/lib/catalog/get-products";
+import { matchesNewArrivalRule } from "@/lib/catalog/new-arrivals-rule";
 import type { Product, ProductVariant } from "@/types/product";
 
 type DbCategoryRow = {
@@ -18,6 +19,8 @@ type DbProductRow = {
   price_cents: number;
   old_price_cents: number | null;
   is_hot: boolean;
+  show_in_new_arrivals_manual: boolean;
+  created_at: string;
   category_id: string;
 };
 
@@ -64,7 +67,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       supabase
         .from("products")
         .select(
-          "id,name,slug,description,composition,price_cents,old_price_cents,is_hot,category_id",
+          "id,name,slug,description,composition,price_cents,old_price_cents,is_hot,show_in_new_arrivals_manual,created_at,category_id",
         )
         .eq("is_visible", true),
     ]);
@@ -169,6 +172,11 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
 
     const variantsList = Array.from(variantGroups.values());
     if (variantsList.length === 0) continue;
+    const isNewArrival = matchesNewArrivalRule({
+      isHot: productRow.is_hot,
+      showInNewArrivalsManual: productRow.show_in_new_arrivals_manual,
+      createdAt: productRow.created_at,
+    });
 
     mappedProducts.push({
       id: index + 1,
@@ -179,7 +187,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       categorySlug,
       price: toCurrency(productRow.price_cents),
       oldPrice: productRow.old_price_cents ? toCurrency(productRow.old_price_cents) : undefined,
-      label: productRow.is_hot ? "Novo" : undefined,
+      label: isNewArrival ? "Novo" : undefined,
       shortDescription: productRow.description || "Peça da coleção atual da Meliar.",
       description: productRow.description || "Peça da coleção atual da Meliar.",
       composition: productRow.composition || "Composição não informada.",

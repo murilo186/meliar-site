@@ -24,7 +24,7 @@ interface DesktopNavItem {
 }
 
 const desktopNavItems: DesktopNavItem[] = [
-  { label: "Novidades", href: "/produtos" },
+  { label: "Produtos", href: "/produtos" },
   ...catalogCategories.map((category) => ({
     label: category.name,
     href: category.href,
@@ -190,7 +190,7 @@ export function Header() {
                       className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
                       href="/produtos"
                     >
-                      Novidades
+                      Produtos
                     </Link>
                   </SheetClose>
 
