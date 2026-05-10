@@ -5,7 +5,7 @@ export function Footer() {
     <footer className="border-t bg-melier-ink text-white" id="contato">
       <div className="container grid gap-5 py-5 sm:grid-cols-[1fr_auto] sm:items-end">
         <div>
-          <p className="font-display text-xl font-bold">Melier</p>
+          <p className="font-display text-xl font-bold">Meliar</p>
           <p className="mt-1 max-w-md text-sm font-semibold leading-5 text-white/72">
             Moda feminina com curadoria compacta, envio nacional e compra simples.
           </p>

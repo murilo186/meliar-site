@@ -548,12 +548,12 @@ export function Header() {
           </div>
 
           <Link
-            aria-label="Melier"
+            aria-label="Meliar"
             className={`flex min-w-0 items-center justify-center overflow-hidden transition-all duration-300 ${logoOffset}`}
             href="/"
           >
             <img
-              alt="Melier"
+              alt="Meliar"
               className={`h-auto max-w-full object-contain transition-all duration-300 ${logoSize}`}
               src={logoHeader}
             />
