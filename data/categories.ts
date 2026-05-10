@@ -19,6 +19,26 @@ export const catalogCategories: Category[] = [
         href: "/partes-de-cima/croppeds",
         image: "/images/roupas/categories/category_croppeds.webp",
       },
+      {
+        slug: "regata",
+        name: "Regata",
+        href: "/partes-de-cima/regata",
+      },
+      {
+        slug: "blusa",
+        name: "Blusa",
+        href: "/partes-de-cima/blusa",
+      },
+      {
+        slug: "body",
+        name: "Body",
+        href: "/partes-de-cima/body",
+      },
+      {
+        slug: "casacos",
+        name: "Casacos",
+        href: "/partes-de-cima/casacos",
+      },
     ],
   },
   {

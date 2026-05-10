@@ -32,7 +32,6 @@ const desktopNavItems: DesktopNavItem[] = [
     href: category.href,
     children: category.children,
   })),
-  { label: "Contato", href: "/#contato" },
 ];
 
 const mobileProductItems = catalogCategories.map((category) => ({
@@ -457,14 +456,6 @@ export function Header() {
                       </div>
                     </div>
 
-                    <SheetClose asChild>
-                      <Link
-                        className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
-                        href="/#contato"
-                      >
-                        Contato
-                      </Link>
-                    </SheetClose>
                   </nav>
                 ) : null}
               </SheetContent>

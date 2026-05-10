@@ -7,12 +7,26 @@ import { createClient } from "@supabase/supabase-js";
 function loadProductsFromDataFile() {
   const filePath = path.join(process.cwd(), "data/products.ts");
   let source = fs.readFileSync(filePath, "utf8");
-  source = source.replace(/^import[^\n]*\n/, "");
+  source = source.replace(/^import[^\n]*\n/gm, "");
   source = source.replace("export const products: Product[] =", "const products =");
   const context = {};
   vm.createContext(context);
   vm.runInContext(`${source}\nthis.__products = products;`, context);
   return context.__products ?? [];
+}
+
+function loadCategoriesFromDataFile() {
+  const filePath = path.join(process.cwd(), "data/categories.ts");
+  let source = fs.readFileSync(filePath, "utf8");
+  source = source.replace(/^import[^\n]*\n/gm, "");
+  source = source.replace(
+    "export const catalogCategories: Category[] =",
+    "const catalogCategories =",
+  );
+  const context = {};
+  vm.createContext(context);
+  vm.runInContext(`${source}\nthis.__categories = catalogCategories;`, context);
+  return context.__categories ?? [];
 }
 
 function slugify(value) {
@@ -48,6 +62,7 @@ async function main() {
   }
 
   const products = loadProductsFromDataFile();
+  const categoriesFromData = loadCategoriesFromDataFile();
   if (products.length === 0) {
     throw new Error("No products found in data/products.ts");
   }
@@ -55,6 +70,52 @@ async function main() {
   const supabase = createClient(url, serviceRole, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
+
+  const parentCategoryRows = categoriesFromData.map((category, index) => ({
+    name: category.name,
+    slug: category.slug,
+    parent_id: null,
+    is_active: true,
+    sort_order: (index + 1) * 10,
+  }));
+
+  if (parentCategoryRows.length > 0) {
+    const { error } = await supabase.from("categories").upsert(parentCategoryRows, {
+      onConflict: "slug",
+    });
+    if (error) throw error;
+  }
+
+  const parentCategorySlugs = categoriesFromData.map((category) => category.slug);
+  const { data: parentCategories, error: parentCategoriesError } = await supabase
+    .from("categories")
+    .select("id,slug")
+    .in("slug", parentCategorySlugs);
+  if (parentCategoriesError) throw parentCategoriesError;
+  const parentIdBySlug = new Map((parentCategories ?? []).map((item) => [item.slug, item.id]));
+
+  const childCategoryRows = [];
+  for (const category of categoriesFromData) {
+    const parentId = parentIdBySlug.get(category.slug);
+    if (!parentId) continue;
+
+    for (const [index, child] of (category.children ?? []).entries()) {
+      childCategoryRows.push({
+        name: child.name,
+        slug: child.slug,
+        parent_id: parentId,
+        is_active: true,
+        sort_order: (index + 1) * 10,
+      });
+    }
+  }
+
+  if (childCategoryRows.length > 0) {
+    const { error } = await supabase.from("categories").upsert(childCategoryRows, {
+      onConflict: "slug",
+    });
+    if (error) throw error;
+  }
 
   const categorySlugs = Array.from(new Set(products.map(getCategorySlug).filter(Boolean)));
   const { data: categories, error: categoriesError } = await supabase
@@ -158,12 +219,6 @@ async function main() {
       .delete()
       .in("product_id", productIds);
     if (deleteImagesError) throw deleteImagesError;
-
-    const { error: deleteVariantsError } = await supabase
-      .from("product_variants")
-      .delete()
-      .in("product_id", productIds);
-    if (deleteVariantsError) throw deleteVariantsError;
   }
 
   const { data: colorsDb, error: colorsDbError } = await supabase
@@ -220,7 +275,10 @@ async function main() {
   }
 
   if (variantRows.length > 0) {
-    const { error } = await supabase.from("product_variants").insert(variantRows);
+    const { error } = await supabase.from("product_variants").upsert(variantRows, {
+      onConflict: "product_id,color_id,size_id",
+      ignoreDuplicates: true,
+    });
     if (error) throw error;
   }
 
