@@ -1,0 +1,1 @@
+export const HIGHLIGHT_PRODUCTS_LIMIT = 6;

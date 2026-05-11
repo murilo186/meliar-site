@@ -1,0 +1,131 @@
+"use client";
+
+import { PropsWithChildren, useEffect, useMemo, useRef, useState } from "react";
+import {
+  CartContext,
+  CartContextValue,
+} from "@/components/cart/cart-store";
+import type { CartItem, CartProductSelection } from "@/types/cart";
+
+const CART_STORAGE_KEY = "melier-cart-items";
+
+export function CartProvider({ children }: PropsWithChildren) {
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [lastAddedSelectionId, setLastAddedSelectionId] = useState<string | null>(null);
+  const [lastAddedAt, setLastAddedAt] = useState(0);
+  const hasLoadedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      const storedItems = window.localStorage.getItem(CART_STORAGE_KEY);
+
+      if (storedItems) {
+        setItems(JSON.parse(storedItems) as CartItem[]);
+      }
+    } catch {
+      window.localStorage.removeItem(CART_STORAGE_KEY);
+    } finally {
+      hasLoadedRef.current = true;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      return;
+    }
+
+    window.localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  }, [items]);
+
+  const addItem = (selection: CartProductSelection) => {
+    setLastAddedSelectionId(selection.id);
+    setLastAddedAt(Date.now());
+
+    setItems((currentItems) => {
+      const existingItem = currentItems.find(
+        (item) => item.selection.id === selection.id,
+      );
+
+      if (!existingItem) {
+        return [...currentItems, { selection, quantity: 1 }];
+      }
+
+      return currentItems.map((item) =>
+        item.selection.id === selection.id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item,
+      );
+    });
+  };
+
+  const decreaseItem = (selectionId: string) => {
+    setItems((currentItems) =>
+      currentItems.flatMap((item) => {
+        if (item.selection.id !== selectionId) {
+          return item;
+        }
+
+        if (item.quantity <= 1) {
+          return [];
+        }
+
+        return { ...item, quantity: item.quantity - 1 };
+      }),
+    );
+  };
+
+  const removeItem = (selectionId: string) => {
+    setItems((currentItems) =>
+      currentItems.filter((item) => item.selection.id !== selectionId),
+    );
+  };
+
+  const setItemQuantity = (selectionId: string, quantity: number) => {
+    const nextQuantity = Math.floor(quantity);
+
+    if (!Number.isFinite(nextQuantity)) {
+      return;
+    }
+
+    setItems((currentItems) =>
+      currentItems.flatMap((item) => {
+        if (item.selection.id !== selectionId) {
+          return item;
+        }
+
+        if (nextQuantity <= 0) {
+          return [];
+        }
+
+        return { ...item, quantity: nextQuantity };
+      }),
+    );
+  };
+
+  const clearCart = () => {
+    setItems([]);
+  };
+
+  const value = useMemo<CartContextValue>(() => {
+    const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+    const subtotal = items.reduce(
+      (total, item) => total + item.selection.price * item.quantity,
+      0,
+    );
+
+    return {
+      items,
+      itemCount,
+      subtotal,
+      lastAddedSelectionId,
+      lastAddedAt,
+      addItem,
+      decreaseItem,
+      setItemQuantity,
+      removeItem,
+      clearCart,
+    };
+  }, [items, lastAddedAt, lastAddedSelectionId]);
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
+}
