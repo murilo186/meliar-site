@@ -1,5 +1,5 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getProducts, type ProductSort } from "@/lib/catalog/get-products";
+import { createSupabaseServiceClient } from "@/lib/supabase/server";
+import type { ProductSort } from "@/lib/catalog/get-products";
 import { matchesNewArrivalRule } from "@/lib/catalog/new-arrivals-rule";
 import type { Product, ProductVariant } from "@/types/product";
 
@@ -62,8 +62,11 @@ function normalizeHexColor(value?: string | null) {
 }
 
 async function getCatalogFromDb(sort: ProductSort = "featured") {
-  const supabase = await createSupabaseServerClient();
-  const [{ data: categories }, { data: productsData, error: productsError }] =
+  const supabase = createSupabaseServiceClient();
+  const [
+    { data: categories, error: categoriesError },
+    { data: productsData, error: productsError },
+  ] =
     await Promise.all([
       supabase.from("categories").select("id,name,slug,parent_id").eq("is_active", true),
       supabase
@@ -74,13 +77,18 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
         .eq("is_visible", true),
     ]);
 
+  if (categoriesError) throw categoriesError;
   if (productsError) throw productsError;
 
   const typedProducts = (productsData ?? []) as DbProductRow[];
   const productIds = typedProducts.map((item) => item.id);
   if (productIds.length === 0) return [];
 
-  const [{ data: variants }, { data: colors }, { data: sizes }] =
+  const [
+    { data: variants, error: variantsError },
+    { data: colors, error: colorsError },
+    { data: sizes, error: sizesError },
+  ] =
     await Promise.all([
       supabase
         .from("product_variants")
@@ -89,6 +97,10 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       supabase.from("colors").select("id,name,slug,hex_code"),
       supabase.from("sizes").select("id,name"),
     ]);
+
+  if (variantsError) throw variantsError;
+  if (colorsError) throw colorsError;
+  if (sizesError) throw sizesError;
 
   const { data: imagesWithPrimary, error: imagesWithPrimaryError } = await supabase
     .from("product_images")
@@ -211,6 +223,10 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
     });
   }
 
+  if (mappedProducts.length === 0 && typedProducts.length > 0) {
+    throw new Error("Catalog mapping produced 0 products from non-empty DB result.");
+  }
+
   return [...mappedProducts].sort((left, right) => {
     switch (sort) {
       case "price-asc":
@@ -228,11 +244,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
 }
 
 export async function getProductsFromDb(sort: ProductSort = "featured") {
-  try {
-    return await getCatalogFromDb(sort);
-  } catch {
-    return getProducts(sort);
-  }
+  return getCatalogFromDb(sort);
 }
 
 export async function getProductsByCategoryFromDb(categorySlug: string, sort: ProductSort = "featured") {

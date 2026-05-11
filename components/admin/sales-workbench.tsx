@@ -137,7 +137,7 @@ export function SalesWorkbench({
             className="h-10 w-full min-w-0 border px-3 text-sm rounded-none"
             defaultValue={query}
             name="q"
-            placeholder="Buscar por #pedido, cliente ou telefone"
+            placeholder="Buscar por #A1B2C3D4, cliente, telefone ou e-mail"
           />
           <select
             className="h-10 w-full min-w-0 border px-3 text-sm rounded-none"

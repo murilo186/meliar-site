@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { FormEvent, useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -11,6 +12,7 @@ export function CreateAccountForm() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -45,10 +47,15 @@ export function CreateAccountForm() {
       setIsSubmitting(false);
       return;
     }
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+    const emailRedirectUrl = new URL("/login", baseUrl);
+    emailRedirectUrl.searchParams.set("auth", "signup-confirmed");
+
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: emailRedirectUrl.toString(),
         data: {
           first_name: firstName,
           last_name: lastName,
@@ -139,17 +146,27 @@ export function CreateAccountForm() {
         <label className="text-sm font-semibold" htmlFor="password">
           Senha
         </label>
-        <input
-          id="password"
-          type="password"
-          autoComplete="new-password"
-          minLength={6}
-          placeholder="Crie uma senha"
-          required
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          className="h-11 w-full rounded-none border border-black/30 px-3 text-sm outline-none placeholder:text-muted-foreground focus:border-melier-rose"
-        />
+        <div className="relative">
+          <input
+            id="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="new-password"
+            minLength={6}
+            placeholder="Crie uma senha"
+            required
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            className="h-11 w-full rounded-none border border-black/30 px-3 pr-11 text-sm outline-none placeholder:text-muted-foreground focus:border-melier-rose"
+          />
+          <button
+            type="button"
+            aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
+            onClick={() => setShowPassword((current) => !current)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-melier-ink/80"
+          >
+            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
 
       {feedback ? <p className="text-sm text-destructive">{feedback}</p> : null}

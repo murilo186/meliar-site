@@ -32,17 +32,34 @@ create extension if not exists pgcrypto;
 -- =========================================================
 -- Helpers
 -- =========================================================
+create schema if not exists private;
+
+revoke all on schema private from public;
+
+create or replace function private.is_admin(p_user_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public, pg_temp
+as $$
+  select exists (
+    select 1
+    from public.profiles p
+    where p.id = p_user_id
+      and p.role = 'admin'
+  );
+$$;
+
+revoke all on function private.is_admin(uuid) from public;
+grant execute on function private.is_admin(uuid) to authenticated, service_role;
+
 create or replace function public.is_admin()
 returns boolean
 language sql
 stable
 as $$
-  select exists (
-    select 1
-    from public.profiles p
-    where p.id = auth.uid()
-      and p.role = 'admin'
-  );
+  select private.is_admin(auth.uid());
 $$;
 
 create or replace function public.set_updated_at()

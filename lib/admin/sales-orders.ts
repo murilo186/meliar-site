@@ -85,6 +85,18 @@ function escapeIlikePattern(raw: string) {
   return raw.replace(/[%_]/g, " ");
 }
 
+function parseOrderIdPrefixFromQuery(raw?: string) {
+  const compact = (raw ?? "").trim().replace(/\s+/g, "").replace(/-/g, "");
+  if (!compact) return null;
+
+  const withoutHash = compact.startsWith("#") ? compact.slice(1) : compact;
+  if (!/^[0-9a-fA-F]{4,8}$/.test(withoutHash)) {
+    return null;
+  }
+
+  return withoutHash.toLowerCase();
+}
+
 function toCounterNumber(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return Math.max(0, Math.floor(value));
@@ -160,6 +172,7 @@ export async function getAdminSalesSummariesPageFromDb({
   const currentPage = Number.isFinite(page) && page > 0 ? Math.floor(page) : 1;
   const safePageSize = Math.min(Math.max(Math.floor(pageSize), 1), 30);
   const search = sanitizeSearchInput(query);
+  const orderIdPrefix = parseOrderIdPrefixFromQuery(query);
 
   const buildRowsQuery = ({ withCount }: { withCount: boolean }) => {
     let queryBuilder = supabase
@@ -175,9 +188,19 @@ export async function getAdminSalesSummariesPageFromDb({
 
     if (search) {
       const pattern = `%${escapeIlikePattern(search)}%`;
-      queryBuilder = queryBuilder.or(
-        `customer_name.ilike.${pattern},customer_phone.ilike.${pattern},customer_email.ilike.${pattern}`,
-      );
+      const orClauses = [
+        `customer_name.ilike.${pattern}`,
+        `customer_phone.ilike.${pattern}`,
+        `customer_email.ilike.${pattern}`,
+      ];
+
+      if (orderIdPrefix) {
+        orClauses.push(`id.ilike.${orderIdPrefix}%`);
+      }
+
+      queryBuilder = queryBuilder.or(orClauses.join(","));
+    } else if (orderIdPrefix) {
+      queryBuilder = queryBuilder.ilike("id", `${orderIdPrefix}%`);
     }
 
     return queryBuilder;

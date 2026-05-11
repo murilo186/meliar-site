@@ -2,19 +2,30 @@
 
 import Link from "next/link";
 import { FormEvent, KeyboardEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, EyeOff } from "lucide-react";
 import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
 export function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isCapsLockOn, setIsCapsLockOn] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
+  const authStatus = searchParams.get("auth");
+
+  const authStatusMessage =
+    authStatus === "signup-confirmed"
+      ? "E-mail confirmado. Faça login para continuar."
+      : authStatus === "email-change-confirmed"
+        ? "Alteração de e-mail confirmada. Faça login novamente."
+        : authStatus === "email-change-pending"
+          ? "Confira seu e-mail para confirmar a alteração."
+          : null;
 
   function handlePasswordKeyEvent(event: KeyboardEvent<HTMLInputElement>) {
     setIsCapsLockOn(event.getModifierState("CapsLock"));
@@ -38,13 +49,19 @@ export function LoginForm() {
       } = await supabase.auth.signInWithPassword({ email, password });
 
       if (error) {
+        const errorCode = "code" in error ? String(error.code || "").toLowerCase() : "";
+        const errorMessage = error.message.toLowerCase();
         const isInvalidCredentials = error.message
           .toLowerCase()
           .includes("invalid login credentials");
+        const isEmailNotConfirmed =
+          errorCode === "email_not_confirmed" || errorMessage.includes("email not confirmed");
         setFeedback(
-          isInvalidCredentials
-            ? "Credenciais inválidas. Verifique e-mail e senha."
-            : "Não foi possível entrar agora. Tente novamente.",
+          isEmailNotConfirmed
+            ? "Seu e-mail ainda não foi confirmado. Acesse sua caixa de entrada e confirme o cadastro."
+            : isInvalidCredentials
+              ? "Credenciais inválidas. Verifique e-mail e senha."
+              : "Não foi possível entrar agora. Tente novamente.",
         );
         setIsSubmitting(false);
         return;
@@ -86,6 +103,12 @@ export function LoginForm() {
 
   return (
     <form className="space-y-6" onSubmit={handleSubmit}>
+      {authStatusMessage ? (
+        <p className="border border-melier-rose/30 bg-[#ffe4ec] px-3 py-2 text-sm text-melier-ink">
+          {authStatusMessage}
+        </p>
+      ) : null}
+
       <div>
         <input
           id="email"

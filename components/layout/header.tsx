@@ -360,13 +360,13 @@ export function Header() {
                     <SheetClose asChild>
                       <Link
                         className="rounded-md px-2 py-2 text-sm font-bold text-melier-ink hover:bg-secondary"
-                        href="/produtos"
+                        href="/"
                       >
-                        Produtos
+                        Início
                       </Link>
                     </SheetClose>
 
-                    <div className="rounded-md border border-black/8">
+                    <div className="rounded-md">
                       <button
                         className="flex w-full items-center justify-between px-2 py-2 text-left text-sm font-bold text-melier-ink"
                         onClick={() => setIsProductsOpen((open) => !open)}
@@ -454,6 +454,41 @@ export function Header() {
                           })}
                         </div>
                       </div>
+                    </div>
+
+                    <div className="mt-1 grid gap-1">
+                      <SheetClose asChild>
+                        <Link
+                          className="rounded-md px-2 py-2 text-sm font-medium text-melier-ink/80 hover:bg-secondary hover:text-melier-rose"
+                          href="/termos-de-compra"
+                        >
+                          Termos de compra
+                        </Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link
+                          className="rounded-md px-2 py-2 text-sm font-medium text-melier-ink/80 hover:bg-secondary hover:text-melier-rose"
+                          href="/entrega-e-frete"
+                        >
+                          Entrega e frete
+                        </Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link
+                          className="rounded-md px-2 py-2 text-sm font-medium text-melier-ink/80 hover:bg-secondary hover:text-melier-rose"
+                          href="/trocas-e-devolucoes"
+                        >
+                          Trocas e devoluções
+                        </Link>
+                      </SheetClose>
+                      <SheetClose asChild>
+                        <Link
+                          className="rounded-md px-2 py-2 text-sm font-medium text-melier-ink/80 hover:bg-secondary hover:text-melier-rose"
+                          href="/politica-de-privacidade"
+                        >
+                          Política de privacidade
+                        </Link>
+                      </SheetClose>
                     </div>
 
                   </nav>
@@ -575,44 +610,49 @@ export function Header() {
                   <span className="w-full truncate text-sm font-semibold text-melier-rose">{firstName}</span>
                 </button>
 
-                {isProfileMenuOpen ? (
-                  <div className="absolute right-0 top-full z-[80] mt-2 w-44 border border-black/10 bg-white p-1 shadow-[0_10px_24px_rgba(17,17,17,0.12)]">
+                <div
+                  aria-hidden={!isProfileMenuOpen}
+                  className={`absolute right-0 top-full z-[80] mt-2 w-44 origin-top-right border border-black/10 bg-white p-1 shadow-[0_10px_24px_rgba(17,17,17,0.12)] transition-all duration-200 ${
+                    isProfileMenuOpen
+                      ? "pointer-events-auto translate-y-0 opacity-100"
+                      : "pointer-events-none -translate-y-2 opacity-0"
+                  }`}
+                >
+                  <Link
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
+                    href="/perfil"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4" />
+                    Perfil
+                  </Link>
+                  <Link
+                    className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
+                    href="/perfil#favoritos"
+                    onClick={() => setIsProfileMenuOpen(false)}
+                  >
+                    <Heart className="h-4 w-4" />
+                    Favoritos
+                  </Link>
+                  {isAdmin ? (
                     <Link
                       className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
-                      href="/perfil"
+                      href="/admin"
                       onClick={() => setIsProfileMenuOpen(false)}
                     >
-                      <User className="h-4 w-4" />
-                      Perfil
+                      <Shield className="h-4 w-4" />
+                      Admin
                     </Link>
-                    <Link
-                      className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
-                      href="/perfil#favoritos"
-                      onClick={() => setIsProfileMenuOpen(false)}
-                    >
-                      <Heart className="h-4 w-4" />
-                      Favoritos
-                    </Link>
-                    {isAdmin ? (
-                      <Link
-                        className="flex items-center gap-2 px-3 py-2 text-sm text-black hover:bg-[#ffe4ec]"
-                        href="/admin"
-                        onClick={() => setIsProfileMenuOpen(false)}
-                      >
-                        <Shield className="h-4 w-4" />
-                        Admin
-                      </Link>
-                    ) : null}
-                    <button
-                      className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-black hover:bg-[#ffe4ec]"
-                      onClick={handleLogout}
-                      type="button"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Sair
-                    </button>
-                  </div>
-                ) : null}
+                  ) : null}
+                  <button
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-black hover:bg-[#ffe4ec]"
+                    onClick={handleLogout}
+                    type="button"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sair
+                  </button>
+                </div>
               </div>
             ) : (
               <Button

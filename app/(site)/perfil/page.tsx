@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CatalogGrid } from "@/components/catalog/catalog-grid";
+import { AccountSecurityForm } from "@/components/profile/account-security-form";
 import { Button } from "@/components/ui/button";
 import { getUserFavoriteProducts } from "@/lib/favorites/get-user-favorite-products";
 import { formatCurrency } from "@/lib/format";
@@ -104,20 +105,12 @@ export default async function ProfilePage() {
           <h2 className="text-sm font-semibold uppercase tracking-[0.08em] text-black">
             Configurações básicas
           </h2>
-          <dl className="mt-3 space-y-2 text-sm">
-            <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-2">
-              <dt className="text-muted-foreground">Nome</dt>
-              <dd className="font-medium text-black">{fullName || "Não informado"}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-2 border-b border-black/10 pb-2">
-              <dt className="text-muted-foreground">Telefone</dt>
-              <dd className="font-medium text-black">{profile?.phone || "Não informado"}</dd>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-muted-foreground">E-mail</dt>
-              <dd className="font-medium text-black">{user.email}</dd>
-            </div>
-          </dl>
+          <AccountSecurityForm
+            currentEmail={user.email || ""}
+            initialFirstName={profile?.first_name || ""}
+            initialLastName={profile?.last_name || ""}
+            initialPhone={profile?.phone || ""}
+          />
         </article>
       </div>
     </section>
