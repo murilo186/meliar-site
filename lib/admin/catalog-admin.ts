@@ -1,5 +1,6 @@
 import { AdminCategory, AdminProduct } from "@/types/admin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { HIGHLIGHT_PRODUCTS_LIMIT } from "@/lib/catalog/highlight-limits";
 
 type ProductRow = {
   id: string;
@@ -84,7 +85,7 @@ export async function getAdminProductsByCategory(
   const { data, error } = await query;
   if (error) throw error;
 
-  return ((data ?? []) as ProductRow[]).map((row) => {
+  const mappedProducts = ((data ?? []) as ProductRow[]).map((row) => {
     const rawCategory = row.categories;
     const categoryObj = Array.isArray(rawCategory)
       ? rawCategory[0]
@@ -116,6 +117,42 @@ export async function getAdminProductsByCategory(
       hasVariantWithoutImage,
     };
   });
+
+  return mappedProducts.sort((left, right) => {
+    const leftHighlightScore = Number(left.isHot) + Number(left.showInNewArrivalsManual);
+    const rightHighlightScore = Number(right.isHot) + Number(right.showInNewArrivalsManual);
+    if (rightHighlightScore !== leftHighlightScore) {
+      return rightHighlightScore - leftHighlightScore;
+    }
+
+    const leftCreatedAt = new Date(left.createdAt).getTime();
+    const rightCreatedAt = new Date(right.createdAt).getTime();
+    return rightCreatedAt - leftCreatedAt;
+  });
+}
+
+export async function getAdminHighlightCounts() {
+  const supabase = await createSupabaseServerClient();
+  const [{ count: hotCount, error: hotError }, { count: newArrivalsCount, error: newError }] =
+    await Promise.all([
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("is_hot", true),
+      supabase
+        .from("products")
+        .select("id", { count: "exact", head: true })
+        .eq("show_in_new_arrivals_manual", true),
+    ]);
+
+  if (hotError) throw hotError;
+  if (newError) throw newError;
+
+  return {
+    hot: hotCount ?? 0,
+    newArrivals: newArrivalsCount ?? 0,
+    max: HIGHLIGHT_PRODUCTS_LIMIT,
+  };
 }
 
 export async function getAdminColors() {

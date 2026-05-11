@@ -12,6 +12,8 @@ export interface Product {
   slug: string;
   name: string;
   isHot?: boolean;
+  showInNewArrivalsManual?: boolean;
+  createdAt?: string;
   category: string;
   categorySlug: string;
   subcategory?: string;

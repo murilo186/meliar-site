@@ -1,12 +1,12 @@
 import { redirect } from "next/navigation";
 import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { formatCurrency } from "@/lib/format";
-import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 import { ProductActionsMenu } from "@/components/admin/product-actions-menu";
-import { matchesNewArrivalRule } from "@/lib/catalog/new-arrivals-rule";
+import { ProductHighlightsForm } from "@/components/admin/product-highlights-form";
 import {
   getAdminCategories,
   getAdminColors,
+  getAdminHighlightCounts,
   getAdminProductsByCategory,
   getAdminSizes,
 } from "@/lib/admin/catalog-admin";
@@ -14,7 +14,6 @@ import {
   createProductAction,
   deleteProductAction,
   toggleProductVisibilityAction,
-  updateProductHighlightsAction,
 } from "@/app/admin/actions";
 import { Button } from "@/components/ui/button";
 
@@ -43,11 +42,12 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
   if (showHiddenOnly) query.set("hidden", "1");
   const currentPath = `/admin/produtos${query.toString() ? `?${query.toString()}` : ""}`;
 
-  const [categories, products, colors, sizes] = await Promise.all([
+  const [categories, products, colors, sizes, highlightCounts] = await Promise.all([
     getAdminCategories(),
     getAdminProductsByCategory(selectedCategoryId, searchQuery, showHiddenOnly),
     getAdminColors(),
     getAdminSizes(),
+    getAdminHighlightCounts(),
   ]);
   const categoriesById = new Map(categories.map((category) => [category.id, category.displayName]));
 
@@ -73,6 +73,26 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
         <p className="text-sm text-muted-foreground">
           Cadastre, edite status, destaque e imagens dos produtos.
         </p>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+          <span
+            className={`border px-2 py-1 ${
+              highlightCounts.hot > highlightCounts.max
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-black/15 bg-black/[0.03] text-melier-ink"
+            }`}
+          >
+            Hot: {highlightCounts.hot} de {highlightCounts.max}
+          </span>
+          <span
+            className={`border px-2 py-1 ${
+              highlightCounts.newArrivals > highlightCounts.max
+                ? "border-red-300 bg-red-50 text-red-700"
+                : "border-black/15 bg-black/[0.03] text-melier-ink"
+            }`}
+          >
+            Novidades: {highlightCounts.newArrivals} de {highlightCounts.max}
+          </span>
+        </div>
       </header>
 
       <article className="border border-black/10 bg-white">
@@ -279,98 +299,65 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
 
       <div className="space-y-3">
         {products.map((product) => {
-          const hasNewLabel = matchesNewArrivalRule({
-            isHot: product.isHot,
-            showInNewArrivalsManual: product.showInNewArrivalsManual,
-            createdAt: product.createdAt,
-          });
-
           return (
-          <article key={product.id} className="border border-black/10 bg-white p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-base font-bold">{product.name}</h3>
-                  {hasNewLabel ? (
-                    <span className="rounded-full bg-[#ffe4ec] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
-                      Novo
+            <article key={product.id} className="border border-black/10 bg-white p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold">{product.name}</h3>
+                    {product.isHot ? (
+                      <span className="rounded-full bg-[#ffe4ec] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
+                        Hot
+                      </span>
+                    ) : null}
+                    {product.showInNewArrivalsManual ? (
+                      <span className="rounded-full bg-[#ffe4ec] px-2 py-0.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
+                        Novo
+                      </span>
+                    ) : null}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {categoriesById.get(product.categoryId) ?? product.categoryName}{" "}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold">
+                    {formatCurrency(product.priceCents / 100)}{" "}
+                    {product.oldPriceCents ? (
+                      <span className="ml-2 text-xs text-muted-foreground line-through">
+                        {formatCurrency(product.oldPriceCents / 100)}
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="mt-1 text-xs">
+                    Status no site:{" "}
+                    <span className={product.isVisible ? "text-emerald-700" : "text-amber-700"}>
+                      {product.isVisible ? "ativo" : "oculto"}
                     </span>
+                  </p>
+                  {product.imagesCount === 0 ? (
+                    <p className="mt-1 text-xs font-semibold text-red-700">Anúncio sem imagem</p>
+                  ) : null}
+                  {product.hasVariantWithoutImage ? (
+                    <p className="mt-1 text-xs font-semibold text-red-700">Variante sem imagem</p>
                   ) : null}
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {categoriesById.get(product.categoryId) ??
-                    product.categoryName}{" "}
-                </p>
-                <p className="mt-1 text-sm font-semibold">
-                  {formatCurrency(product.priceCents / 100)}{" "}
-                  {product.oldPriceCents ? (
-                    <span className="ml-2 text-xs text-muted-foreground line-through">
-                      {formatCurrency(product.oldPriceCents / 100)}
-                    </span>
-                  ) : null}
-                </p>
-                <p className="mt-1 text-xs">
-                  Status no site:{" "}
-                  <span className={product.isVisible ? "text-emerald-700" : "text-amber-700"}>
-                    {product.isVisible ? "ativo" : "oculto"}
-                  </span>
-                </p>
-                {product.imagesCount === 0 ? (
-                  <p className="mt-1 text-xs font-semibold text-red-700">Anúncio sem imagem</p>
-                ) : null}
-                {product.hasVariantWithoutImage ? (
-                  <p className="mt-1 text-xs font-semibold text-red-700">Variante sem imagem</p>
-                ) : null}
+
+                <ProductActionsMenu
+                  isVisible={product.isVisible}
+                  onDelete={deleteProductAction}
+                  onToggleVisibility={toggleProductVisibilityAction}
+                  productId={product.id}
+                  redirectTo={currentPath}
+                />
               </div>
 
-              <ProductActionsMenu
-                isVisible={product.isVisible}
-                onDelete={deleteProductAction}
-                onToggleVisibility={toggleProductVisibilityAction}
-                productId={product.id}
-                redirectTo={currentPath}
-              />
-            </div>
-
-            <div className="mt-4">
-              <form
-                action={async (formData) => {
-                  "use server";
-                  await updateProductHighlightsAction(formData);
-                }}
-                className="space-y-2"
-              >
-                <input type="hidden" name="productId" value={product.id} />
-                <input type="hidden" name="redirectTo" value={currentPath} />
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="isHot"
-                    defaultChecked={product.isHot}
-                    className="h-4 w-4 border rounded-none"
-                  />
-                  Marcar como hot
-                </label>
-                <label className="flex items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    name="showInNewArrivalsManual"
-                    defaultChecked={product.showInNewArrivalsManual}
-                    className="h-4 w-4 border rounded-none"
-                  />
-                  Incluir em novidades selecionadas
-                </label>
-                <ConfirmSubmitButton
-                  className="rounded-none"
-                  confirmMessage="Salvar alterações de destaque deste produto?"
-                  size="sm"
-                  variant="outline"
-                >
-                  Salvar destaque
-                </ConfirmSubmitButton>
-              </form>
-            </div>
-          </article>
+              <div className="mt-4">
+                <ProductHighlightsForm
+                  productId={product.id}
+                  isHot={product.isHot}
+                  showInNewArrivalsManual={product.showInNewArrivalsManual}
+                />
+              </div>
+            </article>
           );
         })}
       </div>

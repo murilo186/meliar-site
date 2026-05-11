@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { HIGHLIGHT_PRODUCTS_LIMIT } from "@/lib/catalog/highlight-limits";
 import { requireAdmin } from "@/lib/admin/require-admin";
 import { getSupabaseProductsBucket } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -698,18 +699,109 @@ export async function deleteProductImageAction(formData: FormData) {
 }
 
 export async function updateProductHighlightsAction(formData: FormData) {
+  return updateProductHighlightsActionState(
+    {
+      status: "idle",
+      message: "",
+      isHot: false,
+      showInNewArrivalsManual: false,
+    },
+    formData,
+  );
+}
+
+export type ProductHighlightsActionState = {
+  status: "idle" | "success" | "error";
+  message: string;
+  isHot: boolean;
+  showInNewArrivalsManual: boolean;
+};
+
+export async function updateProductHighlightsActionState(
+  _previousState: ProductHighlightsActionState,
+  formData: FormData,
+): Promise<ProductHighlightsActionState> {
   await requireAdmin();
 
   const productId = String(formData.get("productId") || "").trim();
   const isHot = formData.get("isHot") === "on";
   const showInNewArrivalsManual = formData.get("showInNewArrivalsManual") === "on";
-  const redirectTo = getRedirectTarget(formData, "/admin/produtos");
 
   if (!productId) {
-    redirectWithNotice(redirectTo, false, "Produto inválido.");
+    return {
+      status: "error",
+      message: "Produto inválido.",
+      isHot,
+      showInNewArrivalsManual,
+    };
   }
 
   const supabase = await createSupabaseServerClient();
+  const { data: currentProduct, error: currentProductError } = await supabase
+    .from("products")
+    .select("is_hot, show_in_new_arrivals_manual")
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (currentProductError || !currentProduct) {
+    return {
+      status: "error",
+      message: "Produto não encontrado para atualizar destaque.",
+      isHot,
+      showInNewArrivalsManual,
+    };
+  }
+
+  if (isHot && !currentProduct.is_hot) {
+    const { count, error: hotCountError } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("is_hot", true);
+
+    if (hotCountError) {
+      return {
+        status: "error",
+        message: `Erro ao validar limite de hot: ${hotCountError.message}`,
+        isHot,
+        showInNewArrivalsManual,
+      };
+    }
+
+    if ((count ?? 0) >= HIGHLIGHT_PRODUCTS_LIMIT) {
+      return {
+        status: "error",
+        message: `Limite atingido para hot (${HIGHLIGHT_PRODUCTS_LIMIT} de ${HIGHLIGHT_PRODUCTS_LIMIT}).`,
+        isHot: currentProduct.is_hot,
+        showInNewArrivalsManual: currentProduct.show_in_new_arrivals_manual,
+      };
+    }
+  }
+
+  if (showInNewArrivalsManual && !currentProduct.show_in_new_arrivals_manual) {
+    const { count, error: newCountError } = await supabase
+      .from("products")
+      .select("id", { count: "exact", head: true })
+      .eq("show_in_new_arrivals_manual", true);
+
+    if (newCountError) {
+      return {
+        status: "error",
+        message: `Erro ao validar limite de novidades: ${newCountError.message}`,
+        isHot,
+        showInNewArrivalsManual,
+      };
+    }
+
+    if ((count ?? 0) >= HIGHLIGHT_PRODUCTS_LIMIT) {
+      return {
+        status: "error",
+        message: `Limite atingido para novidades (${HIGHLIGHT_PRODUCTS_LIMIT} de ${HIGHLIGHT_PRODUCTS_LIMIT}).`,
+        isHot: currentProduct.is_hot,
+        showInNewArrivalsManual: currentProduct.show_in_new_arrivals_manual,
+      };
+    }
+  }
+
   const { error } = await supabase
     .from("products")
     .update({
@@ -719,13 +811,24 @@ export async function updateProductHighlightsAction(formData: FormData) {
     .eq("id", productId);
 
   if (error) {
-    redirectWithNotice(redirectTo, false, `Erro ao atualizar destaque: ${error.message}`);
+    return {
+      status: "error",
+      message: `Erro ao atualizar destaque: ${error.message}`,
+      isHot,
+      showInNewArrivalsManual,
+    };
   }
 
   revalidatePath("/admin");
   revalidatePath("/admin/produtos");
   revalidatePath("/");
-  redirectWithNotice(redirectTo, true, "Destaques atualizados.");
+
+  return {
+    status: "success",
+    message: "Destaques atualizados.",
+    isHot,
+    showInNewArrivalsManual,
+  };
 }
 
 export async function updateStockFromStockPageAction(formData: FormData) {

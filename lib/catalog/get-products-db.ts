@@ -206,6 +206,8 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       slug: productRow.slug,
       name: productRow.name,
       isHot: productRow.is_hot,
+      showInNewArrivalsManual: productRow.show_in_new_arrivals_manual,
+      createdAt: productRow.created_at,
       category: categoryName,
       categorySlug,
       price: toCurrency(productRow.price_cents),
