@@ -4,11 +4,13 @@ import { Star, Trash2, X } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getAdminCategories } from "@/lib/admin/catalog-admin";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
+import { InlineSubmitButton } from "@/components/admin/inline-submit-button";
 import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { Button } from "@/components/ui/button";
 import {
   addVariantAction,
   createColorAction,
+  deleteColorVariantsAction,
   deleteProductImageAction,
   deleteVariantAction,
   setPrimaryProductImageAction,
@@ -32,6 +34,21 @@ export default async function AdminProductEditPage({
   const currentPath = `/admin/produtos/${id}`;
   const noticeStatus = query.status === "error" ? "error" : query.status === "success" ? "success" : null;
   const noticeMessage = query.message ?? "";
+  const noticeText = noticeMessage.toLowerCase();
+  const noticeInVariantsStep =
+    noticeText.includes("variante") ||
+    noticeText.includes("cor") ||
+    noticeText.includes("imagem") ||
+    noticeText.includes("fotos") ||
+    noticeText.includes("estoque") ||
+    noticeText.includes("upload") ||
+    noticeText.includes("tamanho") ||
+    noticeText.includes("ordem");
+  const noticeInDataStep =
+    !noticeInVariantsStep ||
+    noticeText.includes("produto atualizado") ||
+    noticeText.includes("desconto inválido") ||
+    noticeText.includes("dados obrigatórios");
 
   const [
     { data: product },
@@ -88,9 +105,14 @@ export default async function AdminProductEditPage({
     current.push(variant);
     variantsByColor.set(key, current);
   }
+  const colorsCount = variantsByColor.size;
+  const variantsCount = variantsList.length;
+  const totalStock = variantsList.reduce((total, variant) => total + Math.max(0, variant.stock_quantity), 0);
+  const activeVariantsCount = variantsList.filter((variant) => variant.is_available).length;
+  const imagesCount = imagesList.length;
 
   return (
-    <section className="space-y-4">
+    <section id="admin-produto-topo" className="space-y-4 pb-24 md:pb-4">
       {noticeStatus && noticeMessage ? (
         <>
           <ClearNoticeQuery />
@@ -99,7 +121,7 @@ export default async function AdminProductEditPage({
               noticeStatus === "success"
                 ? "border-emerald-200 bg-emerald-50 text-emerald-800"
                 : "border-red-200 bg-red-50 text-red-700"
-            }`}
+            } hidden md:block`}
           >
             {noticeMessage}
           </div>
@@ -118,27 +140,59 @@ export default async function AdminProductEditPage({
           >
             Ver página pública
           </Link>
+          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+            <span className="border border-black/15 bg-black/[0.03] px-2 py-1">
+              {colorsCount} cores
+            </span>
+            <span className="border border-black/15 bg-black/[0.03] px-2 py-1">
+              {variantsCount} variantes
+            </span>
+            <span className="border border-black/15 bg-black/[0.03] px-2 py-1">
+              {imagesCount} fotos
+            </span>
+            <span className="border border-black/15 bg-black/[0.03] px-2 py-1">
+              estoque total {totalStock}
+            </span>
+            <span className="border border-black/15 bg-black/[0.03] px-2 py-1">
+              {activeVariantsCount} ativas
+            </span>
+          </div>
         </div>
         <Button asChild size="sm" variant="outline" className="rounded-none">
           <Link href="/admin/produtos">Voltar</Link>
         </Button>
       </header>
 
-      <article className="border border-black/10 bg-white">
-        <details className="group">
+      <article id="admin-produto-etapa-dados" className="border border-black/10 bg-white">
+        <details className="group" name="admin-product-edit-sections" open>
           <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-bold uppercase tracking-[0.12em] text-melier-ink [&::-webkit-details-marker]:hidden">
-            <span>Dados do produto</span>
+            <span>1. Dados do produto</span>
             <span className="text-base leading-none group-open:hidden">&gt;</span>
             <span className="hidden text-base leading-none group-open:inline">v</span>
           </summary>
 
           <form
+            id="product-data-form"
             action={async (formData) => {
               "use server";
               await updateProductAction(formData);
             }}
             className="grid gap-3 p-4 pt-0"
           >
+          {noticeStatus && noticeMessage && noticeInDataStep ? (
+            <div
+              className={`border px-3 py-2 text-xs ${
+                noticeStatus === "success"
+                  ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                  : "border-red-200 bg-red-50 text-red-700"
+              }`}
+            >
+              {noticeMessage}
+            </div>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            Atualize informações principais antes de mexer em cor, fotos e estoque.
+          </p>
           <input type="hidden" name="productId" value={product.id} />
           <input type="hidden" name="redirectTo" value={currentPath} />
 
@@ -229,16 +283,33 @@ export default async function AdminProductEditPage({
         </details>
       </article>
 
-      <article className="border border-black/10 bg-white">
-        <details className="group">
+      <article id="admin-produto-etapa-variantes" className="border border-black/10 bg-white">
+        <details className="group" name="admin-product-edit-sections">
           <summary className="flex cursor-pointer list-none items-center justify-between p-4 text-sm font-bold uppercase tracking-[0.12em] text-melier-ink [&::-webkit-details-marker]:hidden">
-            <span>Variantes</span>
+            <span>2. Cores, tamanhos e fotos</span>
             <span className="text-base leading-none group-open:hidden">&gt;</span>
             <span className="hidden text-base leading-none group-open:inline">v</span>
           </summary>
 
           <div className="p-4 pt-0">
+            {noticeStatus && noticeMessage && noticeInVariantsStep ? (
+              <div
+                className={`mb-2 border px-3 py-2 text-xs ${
+                  noticeStatus === "success"
+                    ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                    : "border-red-200 bg-red-50 text-red-700"
+                }`}
+              >
+                {noticeMessage}
+              </div>
+            ) : null}
+            <p className="text-xs text-muted-foreground">
+              Organize por cor: adicione tamanhos, suba fotos e ajuste estoque da variante.
+            </p>
             <div className="border border-black/10 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                Criar nova cor
+              </p>
               <form
                 action={async (formData) => {
                   "use server";
@@ -265,9 +336,7 @@ export default async function AdminProductEditPage({
                     className="h-10 border px-2 rounded-none"
                   />
                 </label>
-                <Button size="sm" type="submit" className="rounded-none">
-                  Criar cor
-                </Button>
+                <InlineSubmitButton className="rounded-none" label="Criar cor" />
               </form>
 
               <form
@@ -277,6 +346,9 @@ export default async function AdminProductEditPage({
                 }}
                 className="mt-3 grid gap-3"
               >
+                <p className="text-xs font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+                  Adicionar tamanhos em uma cor existente
+                </p>
                 <input type="hidden" name="productId" value={product.id} />
                 <input type="hidden" name="redirectTo" value={currentPath} />
 
@@ -307,17 +379,15 @@ export default async function AdminProductEditPage({
                       ))}
                     </select>
                   </label>
-                  <Button size="sm" type="submit" className="rounded-none">
-                    Adicionar variantes
-                  </Button>
+                  <InlineSubmitButton className="rounded-none" label="Adicionar variantes" />
                 </div>
 
                 <div>
                   <p className="text-sm font-semibold">Tamanhos</p>
                   <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
                     {(sizes ?? []).map((size) => (
-                      <label key={size.id} className="flex items-center gap-2 px-2 py-2 text-sm">
-                        <input type="checkbox" name="sizeIds" value={size.id} />
+                      <label key={size.id} className="flex items-center gap-2 border px-2 py-2 text-sm">
+                        <input className="h-4 w-4" type="checkbox" name="sizeIds" value={size.id} />
                         {size.name}
                       </label>
                     ))}
@@ -328,50 +398,71 @@ export default async function AdminProductEditPage({
 
             <div className="mt-4 space-y-2">
               {Array.from(variantsByColor.entries()).map(([colorId, colorVariants]) => {
-            const firstVariant = colorVariants[0];
-            const color = firstVariant
-              ? Array.isArray(firstVariant.colors)
-                ? firstVariant.colors[0]
-                : firstVariant.colors
-              : null;
-            const colorImages = imagesList.filter((image) => image.color_id === colorId);
-            const hasPrimary = colorImages.some((image) => image.is_primary);
+                const firstVariant = colorVariants[0];
+                const color = firstVariant
+                  ? Array.isArray(firstVariant.colors)
+                    ? firstVariant.colors[0]
+                    : firstVariant.colors
+                  : null;
+                const colorImages = imagesList.filter((image) => image.color_id === colorId);
+                const hasPrimary = colorImages.some((image) => image.is_primary);
+                const colorStockTotal = colorVariants.reduce(
+                  (total, variant) => total + Math.max(0, variant.stock_quantity),
+                  0,
+                );
+                const colorActiveVariantsCount = colorVariants.filter((variant) => variant.is_available).length;
+                const colorSizesCount = new Set(colorVariants.map((variant) => variant.size_id)).size;
 
-            return (
-              <div key={colorId} className="border border-black/10 p-3">
-                <div className="mt-2 flex items-center gap-2">
-                  {color?.hex_code ? (
-                    <span
-                      className="inline-block h-4 w-4 border border-black/20"
-                      style={{ backgroundColor: color.hex_code }}
-                    />
-                  ) : null}
-                  <span className="text-sm font-semibold">{color?.name ?? "Cor sem nome"}</span>
-                </div>
+                return (
+                  <div key={colorId} className="border border-black/10 bg-black/[0.015] p-3">
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      {color?.hex_code ? (
+                        <span
+                          className="inline-block h-4 w-4 border border-black/20"
+                          style={{ backgroundColor: color.hex_code }}
+                        />
+                      ) : null}
+                      <span className="text-sm font-semibold">{color?.name ?? "Cor sem nome"}</span>
+                      <span className="border border-black/15 bg-black/[0.03] px-2 py-0.5 text-[11px]">
+                        {colorSizesCount} tamanhos
+                      </span>
+                      <span className="border border-black/15 bg-black/[0.03] px-2 py-0.5 text-[11px]">
+                        {colorImages.length} fotos
+                      </span>
+                      <span className="border border-black/15 bg-black/[0.03] px-2 py-0.5 text-[11px]">
+                        estoque {colorStockTotal}
+                      </span>
+                      <span className="border border-black/15 bg-black/[0.03] px-2 py-0.5 text-[11px]">
+                        {colorActiveVariantsCount} ativas
+                      </span>
+                    </div>
 
-                <form
-                  action={async (formData) => {
-                    "use server";
-                    await uploadProductImagesAction(formData);
-                  }}
-                  className="mt-2 flex flex-wrap items-center gap-2"
-                >
-                  <input type="hidden" name="productId" value={product.id} />
-                  <input type="hidden" name="colorId" value={colorId} />
-                  <input type="hidden" name="redirectTo" value={currentPath} />
-                  <input type="file" name="images" accept="image/*" multiple className="text-xs" />
-                  <Button size="sm" type="submit" variant="outline" className="rounded-none">
-                    Upload
-                  </Button>
-                </form>
+                    <form
+                      action={async (formData) => {
+                        "use server";
+                        await uploadProductImagesAction(formData);
+                      }}
+                      className="mt-2 flex flex-wrap items-center gap-2 border border-black/10 bg-white p-2"
+                    >
+                      <input type="hidden" name="productId" value={product.id} />
+                      <input type="hidden" name="colorId" value={colorId} />
+                      <input type="hidden" name="redirectTo" value={currentPath} />
+                      <input type="file" name="images" accept="image/*" multiple className="text-xs" />
+                      <InlineSubmitButton
+                        className="rounded-none"
+                        label="Upload"
+                        pendingLabel="Enviando..."
+                        variant="outline"
+                      />
+                    </form>
 
                 {colorImages.length === 0 ? (
                   <p className="mt-2 text-xs font-semibold text-red-700">Sem imagens nesta cor.</p>
                 ) : null}
 
-                <div className="mt-2 grid gap-2 sm:grid-cols-3">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {colorImages.map((image) => (
-                    <div key={image.id} className="border border-black/10 p-2">
+                    <div key={image.id} className="border border-black/10 bg-white p-2">
                       <div className="relative">
                         <img
                           src={image.image_url}
@@ -421,7 +512,7 @@ export default async function AdminProductEditPage({
                           "use server";
                           await updateProductImageSortOrderAction(formData);
                         }}
-                        className="mt-2 flex items-end gap-2"
+                        className="mt-2 flex items-center justify-between gap-2"
                       >
                         <input type="hidden" name="productId" value={product.id} />
                         <input type="hidden" name="imageId" value={image.id} />
@@ -433,81 +524,93 @@ export default async function AdminProductEditPage({
                             min={0}
                             name="sortOrder"
                             defaultValue={String(image.sort_order)}
-                            className="h-8 w-20 border px-2 text-xs rounded-none"
+                            className="h-9 w-16 border px-2 text-xs rounded-none"
                           />
                         </label>
-                        <Button size="sm" type="submit" variant="outline" className="rounded-none">
-                          Salvar
-                        </Button>
+                        <InlineSubmitButton
+                          className="rounded-none"
+                          label="Salvar"
+                          pendingLabel="Salvando..."
+                          variant="outline"
+                        />
                       </form>
                     </div>
                   ))}
                 </div>
 
-                <div className="mt-3 space-y-2">
-                  {colorVariants.length === 0 ? (
-                    <p className="text-xs font-semibold text-red-700">Sem variantes nesta cor.</p>
-                  ) : null}
-                  {colorVariants.map((variant) => {
-                    const size = Array.isArray(variant.sizes) ? variant.sizes[0] : variant.sizes;
-                    return (
-                      <div key={variant.id} className="p-2">
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          SKU: <span className="font-mono text-[11px] text-black">{variant.sku}</span>
-                        </p>
-                        <p className="mt-1 text-sm">{size?.name ?? "-"}</p>
-                        <div className="mt-2 flex flex-wrap gap-2">
-                          <form
-                            action={async (formData) => {
-                              "use server";
-                              await updateVariantStockAction(formData);
-                            }}
-                            className="flex items-center gap-2"
-                          >
-                            <input type="hidden" name="productId" value={product.id} />
-                            <input type="hidden" name="variantId" value={variant.id} />
-                            <input type="hidden" name="redirectTo" value={currentPath} />
-                            <input
-                              name="stockQuantity"
-                              defaultValue={String(variant.stock_quantity)}
-                              className="h-9 w-24 border px-2 text-sm rounded-none"
-                            />
-                            <label className="flex items-center gap-1 text-xs">
-                              <input
-                                type="checkbox"
-                                name="isAvailable"
-                                defaultChecked={variant.is_available}
-                              />
-                              Ativa
-                            </label>
-                            <ConfirmSubmitButton
-                              className="rounded-none"
-                              confirmMessage="Salvar alterações de estoque desta variante?"
-                              size="sm"
-                              variant="outline"
-                            >
-                              Salvar
-                            </ConfirmSubmitButton>
-                          </form>
+                    <div className="mt-3 space-y-2">
+                      {colorVariants.length === 0 ? (
+                        <p className="text-xs font-semibold text-red-700">Sem variantes nesta cor.</p>
+                      ) : null}
+                      {colorVariants.map((variant) => {
+                        const size = Array.isArray(variant.sizes) ? variant.sizes[0] : variant.sizes;
+                        return (
+                          <div key={variant.id} className="border border-black/10 bg-white p-2">
+                            <p className="mt-1 text-sm font-semibold">Tamanho {size?.name ?? "-"}</p>
+                            <details className="mt-1">
+                              <summary className="cursor-pointer text-[11px] text-muted-foreground">
+                                Ver detalhes técnicos
+                              </summary>
+                              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                                SKU: <span className="font-mono text-[11px] text-black">{variant.sku}</span>
+                              </p>
+                            </details>
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              <form
+                                action={async (formData) => {
+                                  "use server";
+                                  await updateVariantStockAction(formData);
+                                }}
+                                className="grid w-full gap-2 sm:flex sm:items-center"
+                              >
+                                <input type="hidden" name="productId" value={product.id} />
+                                <input type="hidden" name="variantId" value={variant.id} />
+                                <input type="hidden" name="redirectTo" value={currentPath} />
+                                <label className="grid gap-1 text-xs">
+                                  <span className="font-semibold">Qtd em estoque</span>
+                                  <input
+                                    name="stockQuantity"
+                                    defaultValue={String(variant.stock_quantity)}
+                                    className="h-9 w-full border px-2 text-sm rounded-none sm:w-24"
+                                  />
+                                </label>
+                                <label className="flex items-center gap-2 text-xs">
+                                  <input
+                                    className="h-4 w-4"
+                                    type="checkbox"
+                                    name="isAvailable"
+                                    defaultChecked={variant.is_available}
+                                  />
+                                  Ativa
+                                </label>
+                                <ConfirmSubmitButton
+                                  className="rounded-none"
+                                  confirmMessage="Salvar alterações de estoque desta variante?"
+                                  size="sm"
+                                  variant="outline"
+                                >
+                                  Salvar
+                                </ConfirmSubmitButton>
+                              </form>
 
-                          <form action={deleteVariantAction}>
-                            <input type="hidden" name="productId" value={product.id} />
-                            <input type="hidden" name="variantId" value={variant.id} />
-                            <input type="hidden" name="redirectTo" value={currentPath} />
-                            <ConfirmSubmitButton
-                              aria-label="Remover variante"
-                              className="rounded-none px-2"
-                              confirmMessage="Tem certeza que deseja remover/deletar este item?"
-                              size="icon"
-                              variant="outline"
-                            >
-                              <X className="h-4 w-4" />
-                            </ConfirmSubmitButton>
-                          </form>
-                        </div>
-                      </div>
-                    );
-                  })}
+                              <form action={deleteVariantAction}>
+                                <input type="hidden" name="productId" value={product.id} />
+                                <input type="hidden" name="variantId" value={variant.id} />
+                                <input type="hidden" name="redirectTo" value={currentPath} />
+                                <ConfirmSubmitButton
+                                  aria-label="Remover variante"
+                                  className="rounded-none px-2"
+                                  confirmMessage="Tem certeza que deseja remover/deletar este item?"
+                                  size="icon"
+                                  variant="outline"
+                                >
+                                  <X className="h-4 w-4" />
+                                </ConfirmSubmitButton>
+                              </form>
+                            </div>
+                          </div>
+                        );
+                      })}
                   {(() => {
                     const existingSizeIds = new Set(colorVariants.map((variant) => variant.size_id));
                     const availableSizes = (sizes ?? []).filter((size) => !existingSizeIds.has(size.id));
@@ -533,15 +636,40 @@ export default async function AdminProductEditPage({
                             ))}
                           </select>
                         </label>
-                        <Button size="sm" type="submit" variant="outline" className="rounded-none">
-                          Inserir tamanho
-                        </Button>
+                        <InlineSubmitButton
+                          className="rounded-none"
+                          label="Inserir tamanho"
+                          pendingLabel="Inserindo..."
+                          variant="outline"
+                        />
                       </form>
                     );
                   })()}
-                </div>
-              </div>
-            );
+                      <div className="mt-3 border border-red-200 bg-red-50 p-2">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-red-700">
+                          Zona de risco
+                        </p>
+                        <p className="mt-1 text-xs text-red-700">
+                          Remove essa cor inteira, com todos os tamanhos e fotos vinculadas.
+                        </p>
+                        <form action={deleteColorVariantsAction} className="mt-2">
+                          <input type="hidden" name="productId" value={product.id} />
+                          <input type="hidden" name="colorId" value={colorId} />
+                          <input type="hidden" name="redirectTo" value={currentPath} />
+                          <ConfirmSubmitButton
+                            className="rounded-none px-2 text-red-700"
+                            confirmMessage="Tem certeza que deseja remover esta cor com todos os tamanhos e imagens?"
+                            pendingLabel="Removendo..."
+                            size="sm"
+                            variant="outline"
+                          >
+                            Remover cor inteira
+                          </ConfirmSubmitButton>
+                        </form>
+                      </div>
+                    </div>
+                  </div>
+                );
               })}
             </div>
             {variantsByColor.size === 0 ? (
@@ -550,6 +678,20 @@ export default async function AdminProductEditPage({
           </div>
         </details>
       </article>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-black/10 bg-white/95 p-2 backdrop-blur md:hidden">
+        <div className="grid grid-cols-3 gap-2">
+          <Button asChild size="sm" variant="outline" className="rounded-none">
+            <a href="#admin-produto-etapa-dados">Dados</a>
+          </Button>
+          <Button asChild size="sm" variant="outline" className="rounded-none">
+            <a href="#admin-produto-etapa-variantes">Cores</a>
+          </Button>
+          <Button form="product-data-form" size="sm" type="submit" className="rounded-none">
+            Salvar dados
+          </Button>
+        </div>
+      </div>
     </section>
   );
 }

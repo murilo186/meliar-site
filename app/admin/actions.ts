@@ -405,6 +405,86 @@ export async function deleteVariantAction(formData: FormData) {
   redirectWithNotice(redirectTo, true, "Variante removida.");
 }
 
+export async function deleteColorVariantsAction(formData: FormData) {
+  await requireAdmin();
+
+  const productId = String(formData.get("productId") || "").trim();
+  const colorId = String(formData.get("colorId") || "").trim();
+  const redirectTo = getRedirectTarget(formData, `/admin/produtos/${productId}`);
+
+  if (!productId || !colorId) {
+    redirectWithNotice(redirectTo, false, "Cor inválida para remoção completa.");
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { count: variantsCount, error: variantsCountError } = await supabase
+    .from("product_variants")
+    .select("id", { count: "exact", head: true })
+    .eq("product_id", productId)
+    .eq("color_id", colorId);
+
+  if (variantsCountError) {
+    redirectWithNotice(redirectTo, false, "Erro ao validar variantes da cor.");
+  }
+
+  if ((variantsCount ?? 0) === 0) {
+    redirectWithNotice(redirectTo, false, "Não há variantes nesta cor para remover.");
+  }
+
+  const { data: imagesData, error: imagesError } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", productId)
+    .eq("color_id", colorId);
+
+  if (imagesError) {
+    redirectWithNotice(redirectTo, false, "Erro ao buscar imagens da cor.");
+  }
+
+  const { error: variantsDeleteError } = await supabase
+    .from("product_variants")
+    .delete()
+    .eq("product_id", productId)
+    .eq("color_id", colorId);
+
+  if (variantsDeleteError) {
+    redirectWithNotice(redirectTo, false, `Erro ao remover variantes da cor: ${variantsDeleteError.message}`);
+  }
+
+  const { error: imagesDeleteError } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("product_id", productId)
+    .eq("color_id", colorId);
+
+  if (imagesDeleteError) {
+    redirectWithNotice(redirectTo, false, `Erro ao remover imagens da cor: ${imagesDeleteError.message}`);
+  }
+
+  const storagePaths = (imagesData ?? [])
+    .map((image) => image.storage_path)
+    .filter((path): path is string => Boolean(path));
+
+  if (storagePaths.length > 0) {
+    const bucket = getSupabaseProductsBucket();
+    const { error: storageError } = await supabase.storage.from(bucket).remove(storagePaths);
+
+    if (storageError) {
+      revalidatePath(`/admin/produtos/${productId}`);
+      revalidatePath("/produtos");
+      redirectWithNotice(
+        redirectTo,
+        true,
+        "Cor removida, mas houve falha ao limpar alguns arquivos no storage.",
+      );
+    }
+  }
+
+  revalidatePath(`/admin/produtos/${productId}`);
+  revalidatePath("/produtos");
+  redirectWithNotice(redirectTo, true, "Cor removida com todas as variantes.");
+}
+
 export async function toggleProductVisibilityAction(formData: FormData) {
   await requireAdmin();
 

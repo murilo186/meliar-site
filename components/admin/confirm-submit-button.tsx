@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Button, type ButtonProps } from "@/components/ui/button";
 
 type ConfirmSubmitButtonProps = {
@@ -8,9 +9,12 @@ type ConfirmSubmitButtonProps = {
   confirmMessage: string;
   confirmLabel?: string;
   cancelLabel?: string;
+  pendingLabel?: string;
   className?: string;
   variant?: ButtonProps["variant"];
   size?: ButtonProps["size"];
+  disabled?: boolean;
+  "aria-label"?: string;
   children: React.ReactNode;
 };
 
@@ -19,11 +23,15 @@ export function ConfirmSubmitButton({
   confirmMessage,
   confirmLabel = "Confirmar",
   cancelLabel = "Cancelar",
+  pendingLabel = "Salvando...",
   className,
   variant = "default",
   size = "sm",
+  disabled = false,
+  "aria-label": ariaLabel,
   children,
 }: ConfirmSubmitButtonProps) {
+  const { pending } = useFormStatus();
   const [isOpen, setIsOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
@@ -44,14 +52,16 @@ export function ConfirmSubmitButton({
   return (
     <>
       <Button
+        aria-label={ariaLabel}
         className={className}
+        disabled={disabled || pending}
         onClick={openModal}
         ref={triggerRef}
         size={size}
         type="button"
         variant={variant}
       >
-        {children}
+        {pending ? pendingLabel : children}
       </Button>
 
       {isOpen ? (
