@@ -14,7 +14,7 @@ import {
   createProductAction,
   deleteProductAction,
   toggleProductVisibilityAction,
-} from "@/app/admin/actions";
+} from "@/app/admin/produtos/actions";
 import { Button } from "@/components/ui/button";
 
 type AdminProductsPageProps = {

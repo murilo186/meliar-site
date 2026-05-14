@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { useAuthAction } from "@/components/providers/auth-action-provider";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
@@ -436,11 +437,15 @@ export function CartPage() {
                   className="grid grid-cols-[96px_1fr] gap-4 border border-black/10 bg-white p-3 sm:grid-cols-[120px_1fr]"
                   key={item.selection.id}
                 >
-                  <img
-                    alt={item.selection.name}
-                    className="aspect-[4/5] w-full object-cover"
-                    src={item.selection.image}
-                  />
+                  {item.selection.image ? (
+                    <img
+                      alt={item.selection.name}
+                      className="aspect-[4/5] w-full object-cover"
+                      src={item.selection.image}
+                    />
+                  ) : (
+                    <ProductImagePlaceholder className="aspect-[4/5] px-1 text-[9px]" />
+                  )}
 
                   <div className="min-w-0">
                     <div className="flex items-start justify-between gap-3">

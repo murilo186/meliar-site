@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { Button } from "@/components/ui/button";
 import { UpdateOrderStatusButton } from "@/components/admin/update-order-status-button";
 import { formatCurrency } from "@/lib/format";
@@ -65,11 +66,15 @@ export function SalesOrderDetail({ order }: { order: AdminSalesOrder }) {
           {order.items.map((item) => (
             <article className="border border-black/10 bg-white p-3" key={item.id}>
               <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
-                <img
-                  alt={`${item.productName} ${item.variantLabel}`}
-                  className="aspect-square w-full object-cover"
-                  src={item.imageUrl}
-                />
+                {item.imageUrl ? (
+                  <img
+                    alt={`${item.productName} ${item.variantLabel}`}
+                    className="aspect-square w-full object-cover"
+                    src={item.imageUrl}
+                  />
+                ) : (
+                  <ProductImagePlaceholder className="aspect-square" />
+                )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">{item.productName}</p>
                   <p className="text-xs text-muted-foreground">{item.variantLabel}</p>

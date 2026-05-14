@@ -39,7 +39,7 @@ type ProductImageRow = {
   sort_order: number;
 };
 
-const IMAGE_FALLBACK = "/mock/product-shirt.svg";
+const IMAGE_FALLBACK = "";
 
 export interface AdminSalesCounters {
   total: number;

@@ -4,7 +4,7 @@ import { useActionState, useEffect, useState } from "react";
 import {
   type ProductHighlightsActionState,
   updateProductHighlightsActionState,
-} from "@/app/admin/actions";
+} from "@/app/admin/produtos/actions";
 import { ConfirmSubmitButton } from "@/components/admin/confirm-submit-button";
 
 const EMPTY_STATE: ProductHighlightsActionState = {

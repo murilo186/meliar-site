@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { Button } from "@/components/ui/button";
 import { formatCurrency } from "@/lib/format";
 import { getCustomerOrderById } from "@/lib/orders/get-customer-orders";
@@ -63,11 +64,15 @@ export default async function CustomerOrderPage({
           {order.items.map((item) => (
             <article className="border border-black/10 bg-white p-3" key={item.id}>
               <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
-                <img
-                  alt={`${item.productName} ${item.variantLabel}`}
-                  className="aspect-square w-full object-cover"
-                  src={item.imageUrl}
-                />
+                {item.imageUrl ? (
+                  <img
+                    alt={`${item.productName} ${item.variantLabel}`}
+                    className="aspect-square w-full object-cover"
+                    src={item.imageUrl}
+                  />
+                ) : (
+                  <ProductImagePlaceholder className="aspect-square" />
+                )}
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-black">{item.productName}</p>
                   <p className="text-xs text-muted-foreground">{item.variantLabel}</p>

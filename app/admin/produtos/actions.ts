@@ -1,13 +1,20 @@
 "use server";
 
+import sharp from "sharp";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { HIGHLIGHT_PRODUCTS_LIMIT } from "@/lib/catalog/highlight-limits";
 import { requireAdmin } from "@/lib/admin/require-admin";
+import { buildProductImageFolder } from "@/lib/storage/product-image-path";
 import { getSupabaseProductsBucket } from "@/lib/supabase/env";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const MAX_IMAGES_PER_PRODUCT = 3;
+const MAX_UPLOAD_FILE_SIZE_BYTES = 6 * 1024 * 1024;
+const MAX_UPLOAD_INPUT_PIXELS = 24_000_000;
+const MAX_OUTPUT_IMAGE_WIDTH = 1600;
+const MAX_OUTPUT_IMAGE_HEIGHT = 2200;
+const ALLOWED_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 
 function getRedirectTarget(formData: FormData, fallbackPath: string) {
   const redirectTo = String(formData.get("redirectTo") || "").trim();
@@ -573,6 +580,25 @@ export async function uploadProductImagesAction(formData: FormData) {
 
   const supabase = await createSupabaseServerClient();
   const bucket = getSupabaseProductsBucket();
+  const { data: product, error: productError } = await supabase
+    .from("products")
+    .select("slug")
+    .eq("id", productId)
+    .maybeSingle();
+
+  if (productError || !product) {
+    redirectWithNotice(redirectTo, false, "Produto inválido para upload de fotos.");
+  }
+
+  const { data: color, error: colorError } = colorId
+    ? await supabase.from("colors").select("slug").eq("id", colorId).maybeSingle()
+    : { data: null, error: null };
+
+  if (colorId && (colorError || !color)) {
+    redirectWithNotice(redirectTo, false, "Cor inválida para upload de fotos.");
+  }
+
+  const targetFolder = buildProductImageFolder(product.slug, color?.slug ?? null);
 
   let countQuery = supabase
     .from("product_images")
@@ -606,13 +632,37 @@ export async function uploadProductImagesAction(formData: FormData) {
 
   for (let index = 0; index < files.length; index += 1) {
     const file = files[index] as File;
-    const extension = file.name.split(".").pop() || "jpg";
-    const path = `${productId}/${crypto.randomUUID()}.${extension}`;
-    const buffer = Buffer.from(await file.arrayBuffer());
+    if (!ALLOWED_IMAGE_TYPES.has(file.type)) {
+      redirectWithNotice(redirectTo, false, "Envie imagens em JPG, PNG ou WebP.");
+    }
+
+    if (file.size > MAX_UPLOAD_FILE_SIZE_BYTES) {
+      redirectWithNotice(redirectTo, false, "Cada foto deve ter no máximo 6 MB.");
+    }
+
+    const sourceBuffer = Buffer.from(await file.arrayBuffer());
+    let webpBuffer: Buffer;
+
+    try {
+      webpBuffer = await sharp(sourceBuffer, { limitInputPixels: MAX_UPLOAD_INPUT_PIXELS })
+        .rotate()
+        .resize({
+          width: MAX_OUTPUT_IMAGE_WIDTH,
+          height: MAX_OUTPUT_IMAGE_HEIGHT,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 82 })
+        .toBuffer();
+    } catch {
+      redirectWithNotice(redirectTo, false, "Imagem inválida ou grande demais para processamento.");
+    }
+
+    const path = `${targetFolder}/${crypto.randomUUID()}.webp`;
 
     const { error: uploadError } = await supabase.storage
       .from(bucket)
-      .upload(path, buffer, { contentType: file.type, upsert: false });
+      .upload(path, webpBuffer, { contentType: "image/webp", upsert: false });
 
     if (uploadError) {
       redirectWithNotice(redirectTo, false, `Erro no upload: ${uploadError.message}`);
@@ -779,6 +829,8 @@ export async function deleteProductImageAction(formData: FormData) {
 }
 
 export async function updateProductHighlightsAction(formData: FormData) {
+  await requireAdmin();
+
   return updateProductHighlightsActionState(
     {
       status: "idle",
@@ -909,34 +961,4 @@ export async function updateProductHighlightsActionState(
     isHot,
     showInNewArrivalsManual,
   };
-}
-
-export async function updateStockFromStockPageAction(formData: FormData) {
-  await requireAdmin();
-
-  const variantId = String(formData.get("variantId") || "").trim();
-  const stockQuantity = Number(String(formData.get("stockQuantity") || "0"));
-  const isAvailable = formData.get("isAvailable") === "on";
-  const redirectTo = getRedirectTarget(formData, "/admin/estoque");
-
-  if (!variantId || !Number.isFinite(stockQuantity) || stockQuantity < 0) {
-    redirectWithNotice(redirectTo, false, "Dados inválidos para atualização de estoque.");
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase
-    .from("product_variants")
-    .update({
-      stock_quantity: stockQuantity,
-      is_available: isAvailable,
-    })
-    .eq("id", variantId);
-
-  if (error) {
-    redirectWithNotice(redirectTo, false, `Erro ao atualizar estoque: ${error.message}`);
-  }
-
-  revalidatePath("/admin/estoque");
-  revalidatePath("/admin/produtos");
-  redirectWithNotice(redirectTo, true, "Estoque atualizado.");
 }

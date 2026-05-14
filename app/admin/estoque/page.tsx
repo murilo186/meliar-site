@@ -1,4 +1,4 @@
-import { updateStockFromStockPageAction } from "@/app/admin/actions";
+import { updateStockFromStockPageAction } from "@/app/admin/estoque/actions";
 import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { StockTable } from "@/components/admin/stock-table";
 import { Button } from "@/components/ui/button";

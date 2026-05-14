@@ -18,7 +18,7 @@ import {
   updateProductImageSortOrderAction,
   updateVariantStockAction,
   uploadProductImagesAction,
-} from "@/app/admin/actions";
+} from "@/app/admin/produtos/actions";
 
 export default async function AdminProductEditPage({
   params,
@@ -447,7 +447,13 @@ export default async function AdminProductEditPage({
                       <input type="hidden" name="productId" value={product.id} />
                       <input type="hidden" name="colorId" value={colorId} />
                       <input type="hidden" name="redirectTo" value={currentPath} />
-                      <input type="file" name="images" accept="image/*" multiple className="text-xs" />
+                      <input
+                        type="file"
+                        name="images"
+                        accept="image/jpeg,image/png,image/webp"
+                        multiple
+                        className="text-xs"
+                      />
                       <InlineSubmitButton
                         className="rounded-none"
                         label="Upload"

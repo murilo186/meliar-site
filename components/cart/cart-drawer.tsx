@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Minus, Plus, ShoppingBag, Sparkles, Trash2 } from "lucide-react";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import {
   Sheet,
   SheetClose,
@@ -103,11 +104,15 @@ export function CartDrawer() {
                     }`}
                     key={item.selection.id}
                   >
-                    <img
-                      alt={item.selection.name}
-                      className="aspect-[4/5] w-full rounded-xl bg-muted object-cover"
-                      src={item.selection.image}
-                    />
+                    {item.selection.image ? (
+                      <img
+                        alt={item.selection.name}
+                        className="aspect-[4/5] w-full rounded-xl bg-muted object-cover"
+                        src={item.selection.image}
+                      />
+                    ) : (
+                      <ProductImagePlaceholder className="aspect-[4/5] rounded-xl px-1 text-[9px]" />
+                    )}
                     <div className="min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <div>
