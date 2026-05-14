@@ -1,5 +1,5 @@
 import { createSupabaseServiceClient } from "@/lib/supabase/server";
-import type { ProductSort } from "@/lib/catalog/get-products";
+import type { ProductSort } from "@/lib/catalog/types";
 import { matchesNewArrivalRule } from "@/lib/catalog/new-arrivals-rule";
 import type { Product, ProductVariant } from "@/types/product";
 
@@ -179,7 +179,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
           slug: color.slug,
           color: color.name,
           colorHex: normalizeHexColor(color.hex_code),
-          images: variantImages.length > 0 ? variantImages : ["/mock/product-shirt.svg"],
+          images: variantImages,
         });
       }
     }
@@ -216,7 +216,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
       shortDescription: productRow.description || "Peça da coleção atual da Meliar.",
       description: productRow.description || "Peça da coleção atual da Meliar.",
       composition: productRow.composition || "Composição não informada.",
-      sizes: sizesList.length > 0 ? sizesList : ["P", "M", "G"],
+      sizes: sizesList,
       defaultVariantSlug: variantsList[0].slug,
       variants: variantsList,
       ...(hasStockByVariant ? { stockByVariantSlug } : {}),

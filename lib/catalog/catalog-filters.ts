@@ -1,5 +1,5 @@
 import type { Product } from "@/types/product";
-import type { ProductSort } from "@/lib/catalog/get-products";
+import type { ProductSort } from "@/lib/catalog/types";
 
 export interface CatalogFilterOption {
   value: string;

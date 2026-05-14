@@ -5,9 +5,11 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Heart, LogOut, Menu, Search, Shield, User } from "lucide-react";
 import { CartDrawer } from "@/components/cart/cart-drawer";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { Button } from "@/components/ui/button";
+import { brandAssets } from "@/lib/assets/storage-public-url";
 import { sanitizeSearchQuery } from "@/lib/catalog/catalog-search";
-import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
+import { signOutCurrentUser, useAuthState } from "@/lib/hooks/use-auth-state";
 import {
   Sheet,
   SheetClose,
@@ -16,7 +18,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { catalogCategories } from "@/data/categories";
+import { catalogCategories } from "@/lib/catalog/category-data";
 import type { Subcategory } from "@/types/catalog";
 
 interface DesktopNavItem {
@@ -40,14 +42,14 @@ const mobileProductItems = catalogCategories.map((category) => ({
   children: category.children,
 }));
 
-const logoHeader = "/images/logo/logo_header1.png";
+const logoHeader = brandAssets.logoHeader;
 
 interface SearchSuggestion {
   slug: string;
   name: string;
   category: string;
   price: number;
-  image: string;
+  image: string | null;
   href: string;
 }
 
@@ -138,9 +140,7 @@ export function Header() {
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [desktopHoverItem, setDesktopHoverItem] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [firstName, setFirstName] = useState("");
+  const { isAuthenticated, isAdmin, firstName } = useAuthState();
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [desktopQuery, setDesktopQuery] = useState(currentQuery);
   const [mobileQuery, setMobileQuery] = useState(currentQuery);
@@ -177,51 +177,6 @@ export function Header() {
   }, []);
 
   useEffect(() => {
-    const supabase = createSupabaseBrowserClientOrNull();
-    if (!supabase) {
-      setIsAuthenticated(false);
-      setIsAdmin(false);
-      setFirstName("");
-      return;
-    }
-    const browserClient = supabase;
-
-    async function loadUserState() {
-      const {
-        data: { user },
-      } = await browserClient.auth.getUser();
-
-      if (!user) {
-        setIsAuthenticated(false);
-        setIsAdmin(false);
-        setFirstName("");
-        return;
-      }
-
-      setIsAuthenticated(true);
-      const { data: profile } = await browserClient
-        .from("profiles")
-        .select("first_name,role")
-        .eq("id", user.id)
-        .maybeSingle();
-      setFirstName(profile?.first_name?.trim() || "Cliente");
-      setIsAdmin(profile?.role === "admin");
-    }
-
-    void loadUserState();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(() => {
-      void loadUserState();
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
-  useEffect(() => {
     setDesktopQuery(currentQuery);
     setMobileQuery(currentQuery);
   }, [currentQuery]);
@@ -244,14 +199,8 @@ export function Header() {
   }, []);
 
   async function handleLogout() {
-    const supabase = createSupabaseBrowserClientOrNull();
-    if (supabase) {
-      await supabase.auth.signOut();
-    }
+    await signOutCurrentUser();
     setIsProfileMenuOpen(false);
-    setIsAuthenticated(false);
-    setIsAdmin(false);
-    setFirstName("");
     window.location.href = "/";
   }
 
@@ -320,11 +269,15 @@ export function Header() {
                               className="grid grid-cols-[44px_1fr] items-center gap-2 rounded-md px-1 py-1.5 transition hover:bg-[#ffe4ec]"
                               href={suggestion.href}
                             >
-                              <img
-                                alt={suggestion.name}
-                                className="h-11 w-11 rounded-sm object-cover"
-                                src={suggestion.image}
-                              />
+                              {suggestion.image ? (
+                                <img
+                                  alt={suggestion.name}
+                                  className="h-11 w-11 rounded-sm object-cover"
+                                  src={suggestion.image}
+                                />
+                              ) : (
+                                <ProductImagePlaceholder className="h-11 w-11 rounded-sm px-1 text-[8px]" />
+                              )}
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-melier-ink">
                                   {suggestion.name}
@@ -540,11 +493,15 @@ export function Header() {
                               key={suggestion.slug}
                               onClick={() => setIsDesktopSearchOpen(false)}
                             >
-                              <img
-                                alt={suggestion.name}
-                                className="h-12 w-12 rounded-sm object-cover"
-                                src={suggestion.image}
-                              />
+                              {suggestion.image ? (
+                                <img
+                                  alt={suggestion.name}
+                                  className="h-12 w-12 rounded-sm object-cover"
+                                  src={suggestion.image}
+                                />
+                              ) : (
+                                <ProductImagePlaceholder className="h-12 w-12 rounded-sm px-1 text-[8px]" />
+                              )}
                               <div className="min-w-0">
                                 <p className="truncate text-sm font-semibold text-melier-ink">
                                   {suggestion.name}

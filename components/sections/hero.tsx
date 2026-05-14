@@ -3,31 +3,32 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { brandAssets } from "@/lib/assets/storage-public-url";
 
 const spotlightCategories = [
   {
     title: "Vestidos",
-    image: "/images/roupas/categories/category_vestidos.webp",
+    image: brandAssets.categoryVestidos,
     href: "/vestidos",
   },
   {
     title: "Calcas",
-    image: "/images/roupas/categories/category_calcas.webp",
+    image: brandAssets.categoryCalcas,
     href: "/partes-de-baixo/calcas",
   },
   {
     title: "Saias",
-    image: "/images/roupas/categories/category_saias.webp",
+    image: brandAssets.categorySaias,
     href: "/partes-de-baixo/saias",
   },
   {
     title: "Croppeds",
-    image: "/images/roupas/categories/category_croppeds.webp",
+    image: brandAssets.categoryCroppeds,
     href: "/partes-de-cima/croppeds",
   },
   {
     title: "Conjuntos",
-    image: "/images/roupas/categories/category_conjuntos.webp",
+    image: brandAssets.categoryConjuntos,
     href: "/conjuntos",
   },
 ];
@@ -82,11 +83,11 @@ export function Hero() {
           href="/produtos"
         >
           <picture className="block sm:aspect-[1284/494]">
-            <source media="(min-width: 640px)" srcSet="/images/hero/desktop_hero.webp" />
+            <source media="(min-width: 640px)" srcSet={brandAssets.heroDesktop} />
             <img
               alt="Colecao em destaque"
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
-              src="/images/hero/mobile_hero.webp"
+              src={brandAssets.heroMobile}
             />
           </picture>
         </Link>

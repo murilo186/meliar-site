@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import { storeConfig } from "@/config/store";
+import { brandAssets } from "@/lib/assets/storage-public-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: storeConfig.name,
   description: storeConfig.description,
   icons: {
-    icon: "/images/logo/favicon.png",
-    shortcut: "/images/logo/favicon.png",
-    apple: "/images/logo/favicon.png",
+    icon: brandAssets.favicon,
+    shortcut: brandAssets.favicon,
+    apple: brandAssets.favicon,
   },
 };
 

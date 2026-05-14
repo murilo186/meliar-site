@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronDown } from "lucide-react";
-import type { ProductSort } from "@/lib/catalog/get-products";
+import type { ProductSort } from "@/lib/catalog/types";
 
 const sortOptions: Array<{ label: string; value: ProductSort }> = [
   { label: "Destaque", value: "featured" },

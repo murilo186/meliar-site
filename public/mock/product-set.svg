@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
-  <title id="title">Conjunto malha canelada</title>
-  <rect width="800" height="1000" fill="#fff7f9"/>
-  <rect x="76" y="76" width="648" height="848" rx="34" fill="#ffffff"/>
-  <path d="M266 216 356 174h88l90 42 64 108-84 50-34-58v252H320V316l-34 58-84-50 64-108Z" fill="#ffc1d5"/>
-  <path d="M310 622h180l46 272H422l-22-182-22 182H264l46-272Z" fill="#fc6998"/>
-  <path d="M356 174 400 258l44-84" fill="#ffe4ec"/>
-  <path d="M348 622h104M400 258v310M400 704v190" stroke="#111111" stroke-opacity=".18" stroke-width="10" stroke-linecap="round"/>
-</svg>

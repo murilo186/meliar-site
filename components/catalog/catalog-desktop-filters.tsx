@@ -18,7 +18,7 @@ import {
   type CatalogPriceBounds,
 } from "@/lib/catalog/catalog-filters";
 import { getCategories } from "@/lib/catalog/get-categories";
-import type { ProductSort } from "@/lib/catalog/get-products";
+import type { ProductSort } from "@/lib/catalog/types";
 
 interface CatalogDesktopFiltersProps {
   basePath: string;

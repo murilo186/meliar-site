@@ -13,7 +13,7 @@ import {
   sanitizeSearchQuery,
 } from "@/lib/catalog/catalog-search";
 import { getCategoryBySlug } from "@/lib/catalog/get-categories";
-import { parseProductSort } from "@/lib/catalog/get-products";
+import { parseProductSort } from "@/lib/catalog/types";
 import { getProductsByCategoryFromDb } from "@/lib/catalog/get-products-db";
 
 interface CategoryPageProps {

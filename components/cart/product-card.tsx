@@ -1,16 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
 import { Heart } from "lucide-react";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { useFavorites } from "@/components/providers/favorites-provider";
 import { Button } from "@/components/ui/button";
-import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
 import {
   getDefaultVariant,
   getProductPrimaryImage,
-} from "@/lib/catalog/get-products";
+} from "@/lib/catalog/product-ui-helpers";
 import { formatCurrency } from "@/lib/format";
+import { useAuthState } from "@/lib/hooks/use-auth-state";
 import type { Product } from "@/types/product";
 
 interface ProductCardProps {
@@ -24,34 +24,8 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const productImage = getProductPrimaryImage(product);
   const colorCount = product.variants.length;
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAuthState();
   const isFavorited = isFavorite(product.slug);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClientOrNull();
-    if (!supabase) {
-      setIsAdmin(false);
-      return;
-    }
-    const browserClient = supabase;
-
-    async function loadRole() {
-      const {
-        data: { user },
-      } = await browserClient.auth.getUser();
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-      const { data: profile } = await browserClient
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      setIsAdmin(profile?.role === "admin");
-    }
-    void loadRole();
-  }, []);
 
   return (
     <article
@@ -67,11 +41,15 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
             isEditorial ? "aspect-[0.73] bg-[#f6f1ea]" : "aspect-[4/5] bg-muted"
           }`}
         >
-          <img
-            alt={product.name}
-            className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
-            src={productImage}
-          />
+          {productImage ? (
+            <img
+              alt={product.name}
+              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              src={productImage}
+            />
+          ) : (
+            <ProductImagePlaceholder />
+          )}
           {product.label ? (
             <span className="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose shadow-sm">
               {product.label}

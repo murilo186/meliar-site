@@ -1,14 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronRight, Heart, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { useFavorites } from "@/components/providers/favorites-provider";
 import { Button } from "@/components/ui/button";
-import { getDefaultVariant } from "@/lib/catalog/get-products";
+import { getDefaultVariant } from "@/lib/catalog/product-ui-helpers";
 import { formatCurrency } from "@/lib/format";
-import { createSupabaseBrowserClientOrNull } from "@/lib/supabase/client";
+import { useAuthState } from "@/lib/hooks/use-auth-state";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -26,34 +27,8 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const mobileGalleryRef = useRef<HTMLDivElement | null>(null);
   const { addItem } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAuthState();
   const isFavorited = isFavorite(product.slug);
-
-  useEffect(() => {
-    const supabase = createSupabaseBrowserClientOrNull();
-    if (!supabase) {
-      setIsAdmin(false);
-      return;
-    }
-    const browserClient = supabase;
-
-    async function loadRole() {
-      const {
-        data: { user },
-      } = await browserClient.auth.getUser();
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-      const { data: profile } = await browserClient
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      setIsAdmin(profile?.role === "admin");
-    }
-    void loadRole();
-  }, []);
 
   const selectedVariant = useMemo(
     () =>
@@ -130,7 +105,13 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   };
 
   const handleAdvanceImage = () => {
-    const currentIndex = selectedVariant.images.indexOf(activeImage);
+    if (selectedVariant.images.length === 0) {
+      return;
+    }
+
+    const currentIndex = activeImage
+      ? selectedVariant.images.indexOf(activeImage)
+      : -1;
     const nextIndex =
       currentIndex >= 0
         ? (currentIndex + 1) % selectedVariant.images.length
@@ -159,7 +140,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
       productSlug: product.slug,
       name: product.name,
       price: product.price,
-      image: activeImage,
+      image: activeImage ?? "",
       color: selectedVariant.color,
       size: selectedSize,
     });
@@ -202,15 +183,21 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               onScroll={handleMobileGalleryScroll}
               ref={mobileGalleryRef}
             >
-              {selectedVariant.images.map((image, index) => (
-                <div className="w-full shrink-0 snap-center" key={image}>
-                  <img
-                    alt={`${product.name} na cor ${selectedVariant.color} foto ${index + 1}`}
-                    className="aspect-square w-full object-cover"
-                    src={image}
-                  />
+              {selectedVariant.images.length > 0 ? (
+                selectedVariant.images.map((image, index) => (
+                  <div className="w-full shrink-0 snap-center" key={image}>
+                    <img
+                      alt={`${product.name} na cor ${selectedVariant.color} foto ${index + 1}`}
+                      className="aspect-square w-full object-cover"
+                      src={image}
+                    />
+                  </div>
+                ))
+              ) : (
+                <div className="w-full shrink-0 snap-center">
+                  <ProductImagePlaceholder className="aspect-square" />
                 </div>
-              ))}
+              )}
             </div>
 
             <div className="flex items-center justify-center gap-2 lg:hidden">
@@ -252,17 +239,21 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
               </div>
 
               <div className="relative">
-                <button
-                  className="block w-full overflow-hidden bg-transparent p-0 text-left leading-none"
-                  onClick={handleAdvanceImage}
-                  type="button"
-                >
-                  <img
-                  alt={`${product.name} na cor ${selectedVariant.color}`}
-                  className="w-full object-cover"
-                  src={activeImage}
-                />
-                </button>
+                {activeImage ? (
+                  <button
+                    className="block w-full overflow-hidden bg-transparent p-0 text-left leading-none"
+                    onClick={handleAdvanceImage}
+                    type="button"
+                  >
+                    <img
+                      alt={`${product.name} na cor ${selectedVariant.color}`}
+                      className="w-full object-cover"
+                      src={activeImage}
+                    />
+                  </button>
+                ) : (
+                  <ProductImagePlaceholder className="aspect-square" />
+                )}
               </div>
             </div>
           </div>

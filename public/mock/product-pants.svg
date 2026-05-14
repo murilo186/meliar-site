@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-labelledby="title">
-  <title id="title">Calça reta cintura alta</title>
-  <rect width="800" height="1000" fill="#f6f6f6"/>
-  <rect x="76" y="76" width="648" height="848" rx="34" fill="#ffffff"/>
-  <path d="M286 178h228l42 732H424l-24-452-24 452H244l42-732Z" fill="#111111"/>
-  <path d="M286 178h228v74H286z" fill="#fa8fb1"/>
-  <path d="M400 252v196" stroke="#ffffff" stroke-opacity=".28" stroke-width="10"/>
-  <path d="M292 908h86M422 908h86" stroke="#f74780" stroke-width="16" stroke-linecap="round"/>
-</svg>

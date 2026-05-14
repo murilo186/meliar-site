@@ -1,4 +1,4 @@
-import { catalogCategories } from "@/data/categories";
+import { catalogCategories } from "@/lib/catalog/category-data";
 
 export function getCategories() {
   return catalogCategories;

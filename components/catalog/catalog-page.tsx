@@ -8,7 +8,7 @@ import type {
   CatalogFilterOption,
   CatalogPriceBounds,
 } from "@/lib/catalog/catalog-filters";
-import type { ProductSort } from "@/lib/catalog/get-products";
+import type { ProductSort } from "@/lib/catalog/types";
 import type { BreadcrumbItem } from "@/types/catalog";
 import type { Product } from "@/types/product";
 

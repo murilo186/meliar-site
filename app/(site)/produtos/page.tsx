@@ -7,7 +7,7 @@ import {
   serializeFilterParam,
   serializePriceParam,
 } from "@/lib/catalog/catalog-filters";
-import { parseProductSort } from "@/lib/catalog/get-products";
+import { parseProductSort } from "@/lib/catalog/types";
 import { getProductsFromDb } from "@/lib/catalog/get-products-db";
 import { hasNewLabel } from "@/lib/catalog/new-arrivals-rule";
 import {

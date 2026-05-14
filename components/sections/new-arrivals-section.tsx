@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { getProductPrimaryImage } from "@/lib/catalog/get-products";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
+import { getProductPrimaryImage } from "@/lib/catalog/product-ui-helpers";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
@@ -89,6 +90,7 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
             ref={mobileCarouselRef}
           >
             {products.map((product, index) => (
+              // Keep products visible even when DB images are still being uploaded.
               <Link
                 className="group block basis-[84%] shrink-0 snap-start"
                 href={`/produto/${product.slug}`}
@@ -99,11 +101,15 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
               >
                 <article className="overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft">
                   <div className="relative aspect-[0.92] overflow-hidden bg-[#f7efe8]">
-                    <img
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                      src={getProductPrimaryImage(product)}
-                    />
+                    {getProductPrimaryImage(product) ? (
+                      <img
+                        alt={product.name}
+                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        src={getProductPrimaryImage(product)}
+                      />
+                    ) : (
+                      <ProductImagePlaceholder />
+                    )}
                   </div>
                   <div className="flex items-center justify-between gap-3 px-3 py-3">
                     <h3 className="line-clamp-1 text-sm font-extrabold leading-tight text-melier-ink">
@@ -153,11 +159,15 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
               key={product.id}
             >
               <div className="relative aspect-[0.78] overflow-hidden bg-[#f7efe8]">
-                <img
-                  alt={product.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                  src={getProductPrimaryImage(product)}
-                />
+                {getProductPrimaryImage(product) ? (
+                  <img
+                    alt={product.name}
+                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    src={getProductPrimaryImage(product)}
+                  />
+                ) : (
+                  <ProductImagePlaceholder />
+                )}
               </div>
               <div className="grid gap-1 px-3 py-3">
                 <h3 className="text-sm font-extrabold leading-tight text-melier-ink">

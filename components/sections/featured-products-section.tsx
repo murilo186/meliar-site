@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getProductPrimaryImage, getVariantBySlug } from "@/lib/catalog/get-products";
+import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
+import { getProductPrimaryImage, getVariantBySlug } from "@/lib/catalog/product-ui-helpers";
 import { formatCurrency } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
@@ -17,7 +18,9 @@ const BROOKS_CARD_ASPECT_CLASS = "aspect-[69/103]";
 
 function getSlideImages(product: Product) {
   const variant = getVariantBySlug(product, product.defaultVariantSlug);
-  return variant.images.length > 0 ? variant.images : [getProductPrimaryImage(product)];
+  return variant.images.length > 0
+    ? variant.images
+    : [getProductPrimaryImage(product)].filter((image): image is string => Boolean(image));
 }
 
 function wrapIndex(index: number, total: number) {
@@ -160,7 +163,11 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                 const content = (
                   <article className={cardClasses}>
                     <div className={cn("relative overflow-hidden", BROOKS_CARD_ASPECT_CLASS)}>
-                      <img alt={product.name} className={imageClasses} src={imageSrc} />
+                      {imageSrc ? (
+                        <img alt={product.name} className={imageClasses} src={imageSrc} />
+                      ) : (
+                        <ProductImagePlaceholder />
+                      )}
                       {!isCenter ? (
                         <div
                           className={cn(
@@ -171,11 +178,15 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                       ) : null}
                       <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/25 bg-[#8f8f8f]/68 px-2.5 py-2 backdrop-blur-sm shadow-[0_6px_18px_rgba(17,17,17,0.25)]">
                         <div className="flex items-center gap-2">
-                          <img
-                            alt={`Miniatura ${product.name}`}
-                            className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
-                            src={images[0]}
-                          />
+                          {images[0] ? (
+                            <img
+                              alt={`Miniatura ${product.name}`}
+                              className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
+                              src={images[0]}
+                            />
+                          ) : (
+                            <ProductImagePlaceholder className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 px-1 text-[8px]" />
+                          )}
                           <div className="min-w-0 flex-1 text-left">
                             <p
                               className="line-clamp-2 text-left text-[0.92rem] font-semibold leading-tight text-white"
@@ -251,7 +262,11 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
             const content = (
               <article className={cardClasses}>
                 <div className={cn("relative overflow-hidden", BROOKS_CARD_ASPECT_CLASS)}>
-                  <img alt={product.name} className={imageClasses} src={imageSrc} />
+                  {imageSrc ? (
+                    <img alt={product.name} className={imageClasses} src={imageSrc} />
+                  ) : (
+                    <ProductImagePlaceholder />
+                  )}
                   {!isCenter ? (
                     <div
                       className={cn(
@@ -262,11 +277,15 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                   ) : null}
                   <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/25 bg-[#8f8f8f]/68 px-2.5 py-2 backdrop-blur-sm shadow-[0_6px_18px_rgba(17,17,17,0.25)]">
                     <div className="flex items-center gap-2">
-                      <img
-                        alt={`Miniatura ${product.name}`}
-                        className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
-                        src={images[0]}
-                      />
+                      {images[0] ? (
+                        <img
+                          alt={`Miniatura ${product.name}`}
+                          className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
+                          src={images[0]}
+                        />
+                      ) : (
+                        <ProductImagePlaceholder className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 px-1 text-[8px]" />
+                      )}
                       <div className="min-w-0 flex-1 text-left">
                         <p
                           className="line-clamp-2 text-left text-[0.92rem] font-semibold leading-tight text-white"
