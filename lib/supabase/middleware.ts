@@ -1,14 +1,16 @@
 import { createServerClient } from "@supabase/ssr";
+import type { User } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabasePublicEnv, hasSupabasePublicEnv } from "@/lib/supabase/env";
 
 export async function updateSession(request: NextRequest) {
+  let user: User | null = null;
+
   if (!hasSupabasePublicEnv()) {
-    return NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
+    const response = NextResponse.next({
+      request: { headers: request.headers },
     });
+    return { response, user };
   }
 
   let response = NextResponse.next({
@@ -38,14 +40,14 @@ export async function updateSession(request: NextRequest) {
 
   try {
     // Required by Supabase SSR: this call refreshes auth session cookies when needed.
-    await supabase.auth.getUser();
+    const result = await supabase.auth.getUser();
+    user = result.data.user;
   } catch {
-    return NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
+    const fallbackResponse = NextResponse.next({
+      request: { headers: request.headers },
     });
+    return { response: fallbackResponse, user: null };
   }
 
-  return response;
+  return { response, user };
 }
