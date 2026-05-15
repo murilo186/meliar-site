@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { Minus, Plus, ShoppingBag, Sparkles, Trash2 } from "lucide-react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
@@ -105,11 +106,15 @@ export function CartDrawer() {
                     key={item.selection.id}
                   >
                     {item.selection.image ? (
-                      <img
-                        alt={item.selection.name}
-                        className="aspect-[4/5] w-full rounded-xl bg-muted object-cover"
-                        src={item.selection.image}
-                      />
+                      <div className="relative aspect-[4/5] w-full overflow-hidden rounded-xl bg-muted">
+                        <Image
+                          alt={item.selection.name}
+                          className="object-cover"
+                          fill
+                          sizes="76px"
+                          src={item.selection.image}
+                        />
+                      </div>
                     ) : (
                       <ProductImagePlaceholder className="aspect-[4/5] rounded-xl px-1 text-[9px]" />
                     )}

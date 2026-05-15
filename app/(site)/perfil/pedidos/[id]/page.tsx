@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound, redirect } from "next/navigation";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { Button } from "@/components/ui/button";
@@ -65,11 +66,15 @@ export default async function CustomerOrderPage({
             <article className="border border-black/10 bg-white p-3" key={item.id}>
               <div className="grid grid-cols-[88px_minmax(0,1fr)] gap-3">
                 {item.imageUrl ? (
-                  <img
-                    alt={`${item.productName} ${item.variantLabel}`}
-                    className="aspect-square w-full object-cover"
-                    src={item.imageUrl}
-                  />
+                  <div className="relative aspect-square w-full overflow-hidden bg-muted">
+                    <Image
+                      alt={`${item.productName} ${item.variantLabel}`}
+                      className="object-cover"
+                      fill
+                      sizes="88px"
+                      src={item.imageUrl}
+                    />
+                  </div>
                 ) : (
                   <ProductImagePlaceholder className="aspect-square" />
                 )}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Star, Trash2, X } from "lucide-react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -469,11 +470,13 @@ export default async function AdminProductEditPage({
                 <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
                   {colorImages.map((image) => (
                     <div key={image.id} className="border border-black/10 bg-white p-2">
-                      <div className="relative">
-                        <img
-                          src={image.image_url}
+                      <div className="relative aspect-square overflow-hidden bg-muted">
+                        <Image
                           alt={`Imagem de ${color?.name ?? "variante"}`}
-                          className="aspect-square w-full object-cover"
+                          className="object-cover"
+                          fill
+                          sizes="(min-width: 640px) 33vw, 50vw"
+                          src={image.image_url}
                         />
                         <form action={setPrimaryProductImageAction}>
                           <input type="hidden" name="productId" value={product.id} />

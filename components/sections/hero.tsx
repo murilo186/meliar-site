@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { brandAssets } from "@/lib/assets/storage-public-url";
@@ -82,14 +83,24 @@ export function Hero() {
           className="group block overflow-hidden rounded-none border border-black/10 bg-[#f7f1eb]"
           href="/produtos"
         >
-          <picture className="block sm:aspect-[1284/494]">
-            <source media="(min-width: 640px)" srcSet={brandAssets.heroDesktop} />
-            <img
+          <div className="relative block aspect-[4/5] sm:aspect-[1284/494]">
+            <Image
               alt="Colecao em destaque"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.01]"
+              className="object-cover transition-transform duration-500 group-hover:scale-[1.01] sm:hidden"
+              fill
+              priority
+              sizes="100vw"
               src={brandAssets.heroMobile}
             />
-          </picture>
+            <Image
+              alt="Colecao em destaque"
+              className="hidden object-cover transition-transform duration-500 group-hover:scale-[1.01] sm:block"
+              fill
+              priority
+              sizes="100vw"
+              src={brandAssets.heroDesktop}
+            />
+          </div>
         </Link>
       </div>
 
@@ -139,10 +150,12 @@ export function Hero() {
                   href={category.href}
                   key={category.title}
                 >
-                  <div className="mx-auto aspect-square w-full max-w-[108px] overflow-hidden rounded-full border border-black/10 bg-[#faf7f3] sm:max-w-[132px]">
-                    <img
+                  <div className="relative mx-auto aspect-square w-full max-w-[108px] overflow-hidden rounded-full border border-black/10 bg-[#faf7f3] sm:max-w-[132px]">
+                    <Image
                       alt={category.title}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                      className="object-cover transition-transform duration-500 group-hover:scale-[1.05]"
+                      fill
+                      sizes="(min-width: 640px) 132px, calc((100vw - 4.5rem) / 3)"
                       src={category.image}
                     />
                   </div>

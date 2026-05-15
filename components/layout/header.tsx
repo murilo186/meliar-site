@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { ChevronDown, Heart, LogOut, Menu, Search, Shield, User } from "lucide-react";
@@ -270,10 +271,12 @@ export function Header() {
                               href={suggestion.href}
                             >
                               {suggestion.image ? (
-                                <img
+                                <Image
                                   alt={suggestion.name}
                                   className="h-11 w-11 rounded-sm object-cover"
+                                  height={44}
                                   src={suggestion.image}
+                                  width={44}
                                 />
                               ) : (
                                 <ProductImagePlaceholder className="h-11 w-11 rounded-sm px-1 text-[8px]" />
@@ -494,10 +497,12 @@ export function Header() {
                               onClick={() => setIsDesktopSearchOpen(false)}
                             >
                               {suggestion.image ? (
-                                <img
+                                <Image
                                   alt={suggestion.name}
                                   className="h-12 w-12 rounded-sm object-cover"
+                                  height={48}
                                   src={suggestion.image}
+                                  width={48}
                                 />
                               ) : (
                                 <ProductImagePlaceholder className="h-12 w-12 rounded-sm px-1 text-[8px]" />
@@ -544,10 +549,13 @@ export function Header() {
             className={`flex min-w-0 items-center justify-center overflow-hidden transition-all duration-300 ${logoOffset}`}
             href="/"
           >
-            <img
+            <Image
               alt="Meliar"
               className={`h-auto max-w-full object-contain transition-all duration-300 ${logoSize}`}
+              height={104}
+              priority
               src={logoHeader}
+              width={260}
             />
           </Link>
 

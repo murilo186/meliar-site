@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { getProductPrimaryImage, getVariantBySlug } from "@/lib/catalog/product-ui-helpers";
@@ -165,7 +166,13 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                   <article className={cardClasses}>
                     <div className={cn("relative overflow-hidden", BROOKS_CARD_ASPECT_CLASS)}>
                       {imageSrc ? (
-                        <img alt={product.name} className={imageClasses} src={imageSrc} />
+                        <Image
+                          alt={product.name}
+                          className={imageClasses}
+                          fill
+                          sizes="74vw"
+                          src={imageSrc}
+                        />
                       ) : (
                         <ProductImagePlaceholder />
                       )}
@@ -180,10 +187,12 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                       <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/25 bg-[#8f8f8f]/68 px-2.5 py-2 backdrop-blur-sm shadow-[0_6px_18px_rgba(17,17,17,0.25)]">
                         <div className="flex items-center gap-2">
                           {images[0] ? (
-                            <img
+                            <Image
                               alt={`Miniatura ${product.name}`}
                               className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
+                              height={48}
                               src={images[0]}
+                              width={40}
                             />
                           ) : (
                             <ProductImagePlaceholder className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 px-1 text-[8px]" />
@@ -275,7 +284,13 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
               <article className={cardClasses}>
                 <div className={cn("relative overflow-hidden", BROOKS_CARD_ASPECT_CLASS)}>
                   {imageSrc ? (
-                    <img alt={product.name} className={imageClasses} src={imageSrc} />
+                    <Image
+                      alt={product.name}
+                      className={imageClasses}
+                      fill
+                      sizes="(min-width: 1024px) 20vw, 33vw"
+                      src={imageSrc}
+                    />
                   ) : (
                     <ProductImagePlaceholder />
                   )}
@@ -290,10 +305,12 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                   <div className="absolute inset-x-3 bottom-3 z-20 rounded-2xl border border-white/25 bg-[#8f8f8f]/68 px-2.5 py-2 backdrop-blur-sm shadow-[0_6px_18px_rgba(17,17,17,0.25)]">
                     <div className="flex items-center gap-2">
                       {images[0] ? (
-                        <img
+                        <Image
                           alt={`Miniatura ${product.name}`}
                           className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 object-cover"
+                          height={48}
                           src={images[0]}
+                          width={40}
                         />
                       ) : (
                         <ProductImagePlaceholder className="h-12 w-10 shrink-0 rounded-lg border border-white/40 bg-white/20 px-1 text-[8px]" />

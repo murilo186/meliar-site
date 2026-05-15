@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { Check, ChevronRight, Heart, ShoppingBag } from "lucide-react";
 import { useCart } from "@/components/cart/use-cart";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
@@ -187,10 +188,12 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
             >
               {selectedVariant.images.length > 0 ? (
                 selectedVariant.images.map((image, index) => (
-                  <div className="w-full shrink-0 snap-center" key={image}>
-                    <img
+                  <div className="relative aspect-square w-full shrink-0 snap-center" key={image}>
+                    <Image
                       alt={`${product.name} na cor ${selectedVariant.color} foto ${index + 1}`}
-                      className="aspect-square w-full object-cover"
+                      className="object-cover"
+                      fill
+                      sizes="100vw"
                       src={image}
                     />
                   </div>
@@ -222,7 +225,7 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 {selectedVariant.images.map((image, index) => (
                   <button
                     className={cn(
-                      "block w-full overflow-hidden bg-transparent p-0 text-left leading-none transition",
+                      "relative block aspect-square w-full overflow-hidden bg-transparent p-0 text-left leading-none transition",
                       activeImage === image
                         ? "ring-1 ring-melier-ink"
                         : "hover:ring-1 hover:ring-melier-rose",
@@ -231,9 +234,11 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                     onClick={() => setActiveImage(image)}
                     type="button"
                   >
-                    <img
+                    <Image
                       alt={`${product.name} foto ${index + 1}`}
-                      className="aspect-square w-full object-cover"
+                      className="object-cover"
+                      fill
+                      sizes="88px"
                       src={image}
                     />
                   </button>
@@ -247,10 +252,14 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                     onClick={handleAdvanceImage}
                     type="button"
                   >
-                    <img
+                    <Image
                       alt={`${product.name} na cor ${selectedVariant.color}`}
                       className="w-full object-cover"
+                      height={1600}
+                      priority
+                      sizes="(min-width: 1024px) calc((100vw - 500px) * 0.9), 100vw"
                       src={activeImage}
+                      width={1200}
                     />
                   </button>
                 ) : (

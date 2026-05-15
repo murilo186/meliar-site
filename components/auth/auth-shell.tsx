@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { brandAssets } from "@/lib/assets/storage-public-url";
 
 interface AuthShellProps {
@@ -13,10 +14,13 @@ export function AuthShell({ title, subtitle, children }: AuthShellProps) {
       <header>
         <div className="mx-auto flex h-24 w-full max-w-[1440px] items-center justify-center px-6 sm:h-28">
           <Link aria-label="Meliar" href="/" className="inline-flex items-center justify-center">
-            <img
-              src={brandAssets.logoComplete}
+            <Image
               alt="Meliar"
               className="mt-2 h-auto w-[210px] object-contain sm:w-[260px]"
+              height={90}
+              priority
+              src={brandAssets.logoComplete}
+              width={260}
             />
           </Link>
         </div>

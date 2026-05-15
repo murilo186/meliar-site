@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { getProductPrimaryImage } from "@/lib/catalog/product-ui-helpers";
@@ -102,10 +103,12 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
                 <article className="overflow-hidden rounded-[1.6rem] border border-black/10 bg-white shadow-soft">
                   <div className="relative aspect-[0.92] overflow-hidden bg-[#f7efe8]">
                     {getProductPrimaryImage(product) ? (
-                      <img
+                      <Image
                         alt={product.name}
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                        src={getProductPrimaryImage(product)}
+                        className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                        fill
+                        sizes="84vw"
+                        src={getProductPrimaryImage(product)!}
                       />
                     ) : (
                       <ProductImagePlaceholder />
@@ -167,10 +170,12 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
             >
               <div className="relative aspect-[0.78] overflow-hidden bg-[#f7efe8]">
                 {getProductPrimaryImage(product) ? (
-                  <img
+                  <Image
                     alt={product.name}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]"
-                    src={getProductPrimaryImage(product)}
+                    className="object-cover transition-transform duration-500 group-hover:scale-[1.03]"
+                    fill
+                    sizes="(min-width: 1280px) 16vw, (min-width: 1024px) 33vw, 50vw"
+                    src={getProductPrimaryImage(product)!}
                   />
                 ) : (
                   <ProductImagePlaceholder />

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Heart } from "lucide-react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { useFavorites } from "@/components/providers/favorites-provider";
@@ -44,9 +45,15 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
           }`}
         >
           {productImage ? (
-            <img
+            <Image
               alt={product.name}
-              className="h-full w-full object-cover transition duration-300 group-hover:scale-[1.02]"
+              className="object-cover transition duration-300 group-hover:scale-[1.02]"
+              fill
+              sizes={
+                isEditorial
+                  ? "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 84vw"
+                  : "(min-width: 1280px) 25vw, (min-width: 768px) 33vw, 100vw"
+              }
               src={productImage}
             />
           ) : (
