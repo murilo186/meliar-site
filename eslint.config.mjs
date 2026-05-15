@@ -1,8 +1,13 @@
 import js from "@eslint/js";
+import { FlatCompat } from "@eslint/eslintrc";
 import { defineConfig } from "eslint/config";
 import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
+
+const compat = new FlatCompat({
+  baseDirectory: import.meta.dirname,
+});
 
 export default defineConfig([
   {
@@ -16,6 +21,7 @@ export default defineConfig([
       "tailwind.config.ts",
     ],
   },
+  ...compat.extends("next/core-web-vitals"),
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

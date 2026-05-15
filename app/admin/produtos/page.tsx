@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { ClearNoticeQuery } from "@/components/admin/clear-notice-query";
 import { formatCurrency } from "@/lib/format";
 import { ProductActionsMenu } from "@/components/admin/product-actions-menu";
@@ -292,7 +293,7 @@ export default async function AdminProductsPage({ searchParams }: AdminProductsP
             Aplicar
           </Button>
           <Button asChild type="button" size="sm" variant="outline" className="rounded-none">
-            <a href="/admin/produtos">Limpar</a>
+            <Link href="/admin/produtos">Limpar</Link>
           </Button>
         </div>
       </form>
