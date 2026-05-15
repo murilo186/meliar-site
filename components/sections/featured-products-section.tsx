@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { getProductPrimaryImage, getVariantBySlug } from "@/lib/catalog/product-ui-helpers";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getDiscountPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -146,6 +146,7 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                 const images = getSlideImages(product);
                 const isCenter = offset === 0;
                 const isAdjacent = Math.abs(offset) === 1;
+                const discountPercent = getDiscountPercent(product.price, product.oldPrice);
                 const imageSrc = isCenter
                   ? (images[activeImageIndex] ?? images[0])
                   : images[0];
@@ -194,12 +195,22 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                             >
                               {product.name}
                             </p>
-                            <p
-                              className="mt-1 text-left text-[0.95rem] font-bold leading-none text-white"
-                              style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
-                            >
-                              {formatCurrency(product.price)}
-                            </p>
+                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                              <p
+                                className="text-left text-[0.95rem] font-bold leading-none text-white"
+                                style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
+                              >
+                                {formatCurrency(product.price)}
+                              </p>
+                              {discountPercent ? (
+                                <p
+                                  className="text-left text-[11px] font-semibold leading-none text-white/85 line-through"
+                                  style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
+                                >
+                                  {formatCurrency(product.oldPrice!)}
+                                </p>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -245,6 +256,7 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
             const images = getSlideImages(product);
             const isCenter = offset === 0;
             const isAdjacent = Math.abs(offset) === 1;
+            const discountPercent = getDiscountPercent(product.price, product.oldPrice);
             const imageSrc = isCenter
               ? (images[activeImageIndex] ?? images[0])
               : images[0];
@@ -293,12 +305,22 @@ export function FeaturedProductsSection({ products }: FeaturedProductsSectionPro
                         >
                           {product.name}
                         </p>
-                        <p
-                          className="mt-1 text-left text-[0.95rem] font-bold leading-none text-white"
-                          style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
-                        >
-                          {formatCurrency(product.price)}
-                        </p>
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                          <p
+                            className="text-left text-[0.95rem] font-bold leading-none text-white"
+                            style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
+                          >
+                            {formatCurrency(product.price)}
+                          </p>
+                          {discountPercent ? (
+                            <p
+                              className="text-left text-[11px] font-semibold leading-none text-white/85 line-through"
+                              style={{ textShadow: "0 1px 3px rgba(0, 0, 0, 0.85)" }}
+                            >
+                              {formatCurrency(product.oldPrice!)}
+                            </p>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   </div>

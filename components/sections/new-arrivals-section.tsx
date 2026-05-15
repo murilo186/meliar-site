@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { ProductImagePlaceholder } from "@/components/product/product-image-placeholder";
 import { getProductPrimaryImage } from "@/lib/catalog/product-ui-helpers";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getDiscountPercent } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
 
@@ -115,9 +115,16 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
                     <h3 className="line-clamp-1 text-sm font-extrabold leading-tight text-melier-ink">
                       {product.name}
                     </h3>
-                    <p className="shrink-0 text-sm font-extrabold text-melier-ink">
-                      {formatCurrency(product.price)}
-                    </p>
+                    <div className="shrink-0 text-right">
+                      <p className="text-sm font-extrabold text-melier-ink">
+                        {formatCurrency(product.price)}
+                      </p>
+                      {getDiscountPercent(product.price, product.oldPrice) ? (
+                        <p className="text-[11px] font-semibold text-muted-foreground line-through">
+                          {formatCurrency(product.oldPrice!)}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </article>
               </Link>
@@ -173,9 +180,16 @@ export function NewArrivalsSection({ products }: NewArrivalsSectionProps) {
                 <h3 className="text-sm font-extrabold leading-tight text-melier-ink">
                   {product.name}
                 </h3>
-                <p className="text-sm font-extrabold text-melier-ink">
-                  {formatCurrency(product.price)}
-                </p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-extrabold text-melier-ink">
+                    {formatCurrency(product.price)}
+                  </p>
+                  {getDiscountPercent(product.price, product.oldPrice) ? (
+                    <p className="text-[11px] font-semibold text-muted-foreground line-through">
+                      {formatCurrency(product.oldPrice!)}
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </Link>
           ))}

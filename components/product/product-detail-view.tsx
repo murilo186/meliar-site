@@ -8,7 +8,7 @@ import { ProductImagePlaceholder } from "@/components/product/product-image-plac
 import { useFavorites } from "@/components/providers/favorites-provider";
 import { Button } from "@/components/ui/button";
 import { getDefaultVariant } from "@/lib/catalog/product-ui-helpers";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getDiscountPercent } from "@/lib/format";
 import { useAuthState } from "@/lib/hooks/use-auth-state";
 import { cn } from "@/lib/utils";
 import type { Product } from "@/types/product";
@@ -29,6 +29,8 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAdmin } = useAuthState();
   const isFavorited = isFavorite(product.slug);
+  const discountPercent = getDiscountPercent(product.price, product.oldPrice);
+  const hasDiscount = Boolean(discountPercent && product.oldPrice);
 
   const selectedVariant = useMemo(
     () =>
@@ -277,6 +279,16 @@ export function ProductDetailView({ product }: ProductDetailViewProps) {
                 <p className="text-2xl font-black text-melier-ink">
                   {formatCurrency(product.price)}
                 </p>
+                {hasDiscount ? (
+                  <>
+                    <p className="pb-1 text-sm font-semibold text-muted-foreground line-through">
+                      {formatCurrency(product.oldPrice!)}
+                    </p>
+                    <span className="mb-1 rounded-full border border-melier-rose/25 bg-melier-rose/10 px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
+                      {discountPercent}% OFF
+                    </span>
+                  </>
+                ) : null}
               </div>
 
               <p className="mt-2 text-sm font-semibold leading-6 text-muted-foreground">

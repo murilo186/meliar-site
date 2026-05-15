@@ -9,7 +9,7 @@ import {
   getDefaultVariant,
   getProductPrimaryImage,
 } from "@/lib/catalog/product-ui-helpers";
-import { formatCurrency } from "@/lib/format";
+import { formatCurrency, getDiscountPercent } from "@/lib/format";
 import { useAuthState } from "@/lib/hooks/use-auth-state";
 import type { Product } from "@/types/product";
 
@@ -26,6 +26,8 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
   const { isFavorite, toggleFavorite } = useFavorites();
   const { isAdmin } = useAuthState();
   const isFavorited = isFavorite(product.slug);
+  const discountPercent = getDiscountPercent(product.price, product.oldPrice);
+  const hasDiscount = Boolean(discountPercent && product.oldPrice);
 
   return (
     <article
@@ -53,6 +55,11 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
           {product.label ? (
             <span className="absolute left-3 top-3 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-[0.08em] text-melier-rose shadow-sm">
               {product.label}
+            </span>
+          ) : null}
+          {hasDiscount ? (
+            <span className="absolute bottom-3 left-3 rounded-full border border-melier-rose/25 bg-white px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-melier-rose">
+              {discountPercent}% OFF
             </span>
           ) : null}
           <Button
@@ -92,9 +99,16 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
             </p>
           </div>
           {!isEditorial ? (
-            <p className="shrink-0 text-right text-sm font-extrabold text-melier-ink">
-              {formatCurrency(product.price)}
-            </p>
+            <div className="shrink-0 text-right">
+              <p className="text-sm font-extrabold text-melier-ink">
+                {formatCurrency(product.price)}
+              </p>
+              {hasDiscount ? (
+                <p className="text-[11px] font-semibold text-muted-foreground line-through">
+                  {formatCurrency(product.oldPrice!)}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </div>
         <div
@@ -109,7 +123,18 @@ export function ProductCard({ product, variant = "default" }: ProductCardProps) 
               isEditorial ? "font-semibold text-melier-ink" : "font-bold text-muted-foreground"
             }`}
           >
-            {isEditorial ? formatCurrency(product.price) : "Escolha cor e tamanho"}
+            {isEditorial ? (
+              <span className="inline-flex items-center gap-2">
+                <span>{formatCurrency(product.price)}</span>
+                {hasDiscount ? (
+                  <span className="text-[11px] text-muted-foreground line-through">
+                    {formatCurrency(product.oldPrice!)}
+                  </span>
+                ) : null}
+              </span>
+            ) : (
+              "Escolha cor e tamanho"
+            )}
           </p>
           <Button
             asChild
