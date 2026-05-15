@@ -29,6 +29,7 @@ type DbVariantRow = {
   color_id: string;
   size_id: string;
   stock_quantity: number;
+  reserved_quantity: number;
   is_available: boolean;
 };
 
@@ -92,7 +93,7 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
     await Promise.all([
       supabase
         .from("product_variants")
-        .select("product_id,color_id,size_id,stock_quantity,is_available")
+        .select("product_id,color_id,size_id,stock_quantity,reserved_quantity,is_available")
         .in("product_id", productIds),
       supabase.from("colors").select("id,name,slug,hex_code"),
       supabase.from("sizes").select("id,name"),
@@ -163,7 +164,9 @@ async function getCatalogFromDb(sort: ProductSort = "featured") {
 
       if (sizeName) {
         const variantStock = stockByVariantSlug[color.slug] ?? {};
-        variantStock[sizeName] = variantRow.is_available ? variantRow.stock_quantity : 0;
+        variantStock[sizeName] = variantRow.is_available
+          ? Math.max(0, variantRow.stock_quantity - variantRow.reserved_quantity)
+          : 0;
         stockByVariantSlug[color.slug] = variantStock;
       }
 

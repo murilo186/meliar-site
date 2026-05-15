@@ -4,6 +4,7 @@ import {
   formatCheckoutIssuesMessage,
   validateCheckoutCartItems,
 } from "@/lib/orders/checkout-validation";
+import { reserveOrderInventory } from "@/lib/orders/order-inventory";
 import { buildOrderNumber } from "@/lib/orders/order-number";
 import { createSupabaseServerClient, createSupabaseServiceClient } from "@/lib/supabase/server";
 import { buildWhatsAppUrl } from "@/lib/whatsapp/build-whatsapp-url";
@@ -92,6 +93,15 @@ export async function createWhatsAppOrder(items: CartItem[]) {
   if (itemsError) {
     await serviceClient.from("orders").delete().eq("id", orderId);
     throw new Error("Pedido criado, mas houve erro ao registrar os itens.");
+  }
+
+  try {
+    await reserveOrderInventory(serviceClient, orderId);
+  } catch (error) {
+    await serviceClient.from("orders").delete().eq("id", orderId);
+    const message =
+      error instanceof Error ? error.message : "Não foi possível reservar o estoque agora.";
+    throw new CheckoutValidationError(message, 409);
   }
 
   const orderNumber = buildOrderNumber(orderId);

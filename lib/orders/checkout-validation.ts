@@ -17,6 +17,7 @@ type VariantRow = {
   color_id: string;
   size_id: string;
   stock_quantity: number;
+  reserved_quantity: number;
   is_available: boolean;
   price_cents: number | null;
 };
@@ -276,7 +277,7 @@ export async function validateCheckoutCartItems(items: CartItem[]): Promise<Chec
 
   const { data: variantsData, error: variantsError } = await serviceClient
     .from("product_variants")
-    .select("id,product_id,color_id,size_id,stock_quantity,is_available,price_cents")
+    .select("id,product_id,color_id,size_id,stock_quantity,reserved_quantity,is_available,price_cents")
     .in("product_id", productIds)
     .in("color_id", colorIds)
     .in("size_id", sizeIds);
@@ -306,8 +307,9 @@ export async function validateCheckoutCartItems(items: CartItem[]): Promise<Chec
       continue;
     }
 
-    const availableQuantity =
-      variant.is_available && variant.stock_quantity > 0 ? variant.stock_quantity : 0;
+    const availableQuantity = variant.is_available
+      ? Math.max(0, variant.stock_quantity - variant.reserved_quantity)
+      : 0;
 
     if (availableQuantity <= 0) {
       issues.push({
